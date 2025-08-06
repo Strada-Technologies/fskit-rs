@@ -5,6 +5,9 @@ pub enum Error {
     #[error(transparent)]
     Io(#[from] std::io::Error),
 
+    #[error("Socket starting error")]
+    SocketFailed,
+
     #[error("Mount failed: Unable to complete the request")]
     MountFailed,
 

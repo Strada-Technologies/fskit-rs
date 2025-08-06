@@ -4,9 +4,13 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+bytes = "1.10"
+prost = "0.14"
 thiserror = "2.0"
-tempfile = "3.20"
-tokio = { version = "1.47", features = ["net", "rt", "rt-multi-thread", "macros", "process", "sync"] }
+tokio = { version = "1.47", features = ["net", "rt", "rt-multi-thread", "macros", "process", "sync", "io-util"] }
+
+[build-dependencies]
+prost-build = "0.14"
 
 [dev-dependencies]
 futures = "0.3"

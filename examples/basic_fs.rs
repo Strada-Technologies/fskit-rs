@@ -1,6 +1,8 @@
-use fskit_rs::{FileAttr, FileType, Filesystem, Result};
 use std::path::Path;
+
 use tokio::sync::oneshot;
+
+use fskit_rs::{FileAttr, FileType, Filesystem, Result};
 
 struct FsHandler;
 
@@ -66,23 +68,23 @@ impl Filesystem for FsHandler {
 async fn main() {
     let (stop_tx, stop_rx) = oneshot::channel::<()>();
     tokio::task::spawn_blocking(move || {
-        let handler = FsHandler;
-
-        let mount_point = Path::new("/tmp/fskit-rs-mount_point");
-
-        let session = match fskit_rs::mount(handler, mount_point) {
-            Ok(session) => session,
-            Err(err) => {
-                eprintln!("{}", err);
-                return;
-            }
-        };
-
         futures::executor::block_on(async {
-            let _ = stop_rx.await;
-        });
+            let handler = FsHandler;
 
-        drop(session);
+            let mount_point = Path::new("/tmp/fskit-rs-mount_point");
+
+            let session = match fskit_rs::mount(handler, mount_point).await {
+                Ok(session) => session,
+                Err(err) => {
+                    eprintln!("{}", err);
+                    return;
+                }
+            };
+
+            let _ = stop_rx.await;
+
+            drop(session);
+        });
     })
     .await
     .unwrap();

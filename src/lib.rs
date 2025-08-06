@@ -5,7 +5,13 @@ pub use crate::error::{Error, Result};
 use crate::session::Session;
 
 mod error;
+mod mounter;
 mod session;
+mod socket;
+
+pub mod pb {
+    include!(concat!(env!("OUT_DIR"), "/_.rs"));
+}
 
 pub struct FileAttr {
     pub ino: u64,
@@ -65,16 +71,15 @@ pub trait Filesystem {
 }
 
 /// Mount the given filesystem to the given mountpoint. This function spawns
-/// a background thread to handle filesystem operations while being mounted
-/// and therefore returns immediately. The returned handle should be stored
-/// to reference the mounted filesystem. If it's dropped, the filesystem will
-/// be unmounted.
-pub fn mount<FS, P>(filesystem: FS, mount_point: P) -> Result<Session>
+/// a background thread to handle filesystem operations while being mounted.
+/// The returned handle should be stored to reference the mounted filesystem.
+/// If it's dropped, the filesystem will be unmounted.
+pub async fn mount<FS, P>(filesystem: FS, mount_point: P) -> Result<Session>
 where
     FS: Filesystem + Send + 'static,
     P: AsRef<Path>,
 {
-    Session::new(filesystem, mount_point)
+    Ok(Session::new(filesystem, mount_point).await?)
 }
 
 #[macro_export]
