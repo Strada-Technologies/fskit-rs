@@ -12,7 +12,8 @@ use tokio::sync::mpsc::{Receiver, Sender};
 use tokio::sync::{mpsc, RwLock};
 
 use crate::error::Result;
-use crate::pb::Request;
+use crate::pb::response::ResponseData;
+use crate::pb::{Request, Response, ResponseTypeOne};
 use crate::Error::SocketFailed;
 
 const LOCALHOST_PORT: i32 = 35367;
@@ -95,9 +96,34 @@ impl Socket {
                         while buf.has_remaining() {
                             let mut frozen = buf.clone().freeze();
                             match Request::decode_length_delimited(&mut frozen) {
-                                Ok(msg) => {
-                                    println!("Received message: {:?}", msg);
+                                Ok(request) => {
+                                    println!("Received message: {request:?}");
                                     buf.advance(buf.len() - frozen.remaining());
+
+                                    // Build response
+                                    let response = Response {
+                                        request_id: request.request_id,
+                                        response_data: Some(ResponseData::TypeOne(
+                                            ResponseTypeOne {
+                                                reply: "Pong".to_string(),
+                                                success: true,
+                                            },
+                                        )),
+                                    };
+
+                                    // Encode response
+                                    let mut out_buf = Vec::with_capacity(128);
+                                    response.encode_length_delimited(&mut out_buf).unwrap();
+
+                                    // Wait for write readiness
+                                    stream.ready(Interest::WRITABLE).await.unwrap();
+                                    match stream.try_write(&out_buf) {
+                                        Ok(written) => println!("Wrote {} bytes", written),
+                                        Err(e) => {
+                                            eprintln!("Write error: {:?}", e);
+                                            //return Err(e);
+                                        }
+                                    }
                                 }
                                 Err(e)
                                     if e.to_string().contains("failed to decode length prefix") =>
