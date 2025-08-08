@@ -2,14 +2,16 @@ use std::path::Path;
 use std::time::SystemTime;
 
 pub use crate::error::{Error, Result};
+pub use crate::pb::response::{Capabilities, capabilities};
 use crate::session::Session;
 
 mod error;
+mod handler;
 mod mounter;
 mod session;
 mod socket;
 
-pub mod pb {
+mod pb {
     include!(concat!(env!("OUT_DIR"), "/_.rs"));
 }
 
@@ -41,6 +43,8 @@ pub enum FileType {
 }
 
 pub trait Filesystem {
+    fn set_vol_caps(&self) -> Result<Capabilities>;
+
     fn init(&mut self) -> Result<()>;
 
     fn lookup(&self, parent: &str, name: &str) -> Result<FileAttr>;
@@ -74,12 +78,12 @@ pub trait Filesystem {
 /// a background thread to handle filesystem operations while being mounted.
 /// The returned handle should be stored to reference the mounted filesystem.
 /// If it's dropped, the filesystem will be unmounted.
-pub async fn mount<FS, P>(filesystem: FS, mount_point: P) -> Result<Session>
+pub async fn mount<FS, P>(filesystem: FS, mount_point: P) -> Result<Session<FS>>
 where
-    FS: Filesystem + Send + 'static,
+    FS: Filesystem + Send + Sync + 'static,
     P: AsRef<Path>,
 {
-    Ok(Session::new(filesystem, mount_point).await?)
+    Session::new(filesystem, mount_point).await
 }
 
 #[macro_export]

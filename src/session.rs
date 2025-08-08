@@ -1,26 +1,34 @@
 use std::path::Path;
 
-use crate::error::Result;
-use crate::mounter::Mount;
-use crate::socket::Socket;
 use crate::Filesystem;
+use crate::error::Result;
+use crate::handler::Handler;
+use crate::mounter::Mounter;
+use crate::socket::Socket;
 
 /// The session data structure
 #[derive(Debug)]
-pub struct Session {
-    socket: Socket,
-    mount: Option<Mount>,
+pub struct Session<FS>
+where
+    FS: Filesystem + Send + Sync + 'static,
+{
+    socket: Socket<FS>,
+    mounter: Option<Mounter>,
 }
 
-impl Session {
-    pub(super) async fn new<FS, P>(filesystem: FS, mount_point: P) -> Result<Self>
+impl<FS> Session<FS>
+where
+    FS: Filesystem + Send + Sync + 'static,
+{
+    pub(super) async fn new<P>(filesystem: FS, mount_point: P) -> Result<Self>
     where
-        FS: Filesystem + Send + 'static,
         P: AsRef<Path>,
     {
-        let socket = Socket::start().await?;
+        let handler = Handler::new(filesystem);
 
-        let mount = match Mount::mount(mount_point.as_ref().to_path_buf()) {
+        let socket = Socket::start(handler).await?;
+
+        let mounter = match Mounter::mount(mount_point.as_ref().to_path_buf()) {
             Ok(mount) => mount,
             Err(e) => {
                 socket.stop().await;
@@ -30,15 +38,18 @@ impl Session {
 
         Ok(Self {
             socket,
-            mount: Some(mount),
+            mounter: Some(mounter),
         })
     }
 }
 
-impl Drop for Session {
+impl<FS> Drop for Session<FS>
+where
+    FS: Filesystem + Send + Sync + 'static,
+{
     fn drop(&mut self) {
-        if let Some(mount) = self.mount.take() {
-            mount.unmount().unwrap();
+        if let Some(mounter) = self.mounter.take() {
+            mounter.unmount().unwrap();
         }
 
         let socket = self.socket.clone();

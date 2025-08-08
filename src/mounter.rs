@@ -2,23 +2,23 @@ use std::fs::File;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
+use crate::Error::{MountFailed, UnmountFailed};
 use crate::error::Result;
 use crate::path;
-use crate::Error::{MountFailed, UnmountFailed};
 
 #[derive(Debug)]
-pub(super) struct Mount {
+pub(super) struct Mounter {
     path: PathBuf,
 }
 
-impl Mount {
+impl Mounter {
     pub(super) fn mount(path: PathBuf) -> Result<Self> {
         let mount = Self { path: path.clone() };
 
         // Create a blank disk image
         let image = Path::new("/tmp/fskit.dmg");
         if !image.exists() {
-            File::create(&image)?;
+            File::create(image)?;
         }
 
         // Attach the raw image as a virtual disk

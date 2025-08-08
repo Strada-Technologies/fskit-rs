@@ -2,11 +2,15 @@ use std::path::Path;
 
 use tokio::sync::oneshot;
 
-use fskit_rs::{FileAttr, FileType, Filesystem, Result};
+use fskit_rs::{Capabilities, FileAttr, FileType, Filesystem, Result};
 
 struct FsHandler;
 
 impl Filesystem for FsHandler {
+    fn set_vol_caps(&self) -> Result<Capabilities> {
+        Ok(Capabilities::default())
+    }
+
     fn init(&mut self) -> Result<()> {
         todo!()
     }
