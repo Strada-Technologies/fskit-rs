@@ -1,8 +1,8 @@
+use std::ffi::OsStr;
 use std::path::Path;
-use std::time::SystemTime;
 
 pub use crate::error::{Error, Result};
-pub use crate::pb::response::{Capabilities, capabilities};
+pub use crate::pb::response::{ItemAttributes, ItemType, VolumeCapabilities, VolumeCaseFormat};
 use crate::session::Session;
 
 mod error;
@@ -15,43 +15,17 @@ mod pb {
     include!(concat!(env!("OUT_DIR"), "/_.rs"));
 }
 
-pub struct FileAttr {
-    pub ino: u64,
-    pub size: u64,
-    pub blocks: u64,
-    pub atime: SystemTime,
-    pub mtime: SystemTime,
-    pub ctime: SystemTime,
-    pub kind: FileType,
-    pub perm: u16,
-    pub nlink: u32,
-    pub uid: u32,
-    pub gid: u32,
-    pub rdev: u32,
-    pub flags: u32,
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum FileType {
-    RegularFile,
-    Directory,
-    Symlink,
-    BlockDevice,
-    CharDevice,
-    NamedPipe,
-    Socket,
-}
-
 pub trait Filesystem {
-    fn set_vol_caps(&self) -> Result<Capabilities>;
+    fn set_vol_caps(&self) -> Result<VolumeCapabilities>;
 
     fn init(&mut self) -> Result<()>;
 
-    fn lookup(&self, parent: &str, name: &str) -> Result<FileAttr>;
+    /// Look up a directory entry by name and get its attributes.
+    fn lookup(&mut self, parent: u64, name: &OsStr) -> Result<ItemAttributes>;
 
-    fn getattr(&self, path: &str) -> Result<FileAttr>;
+    fn getattr(&self, path: &str) -> Result<ItemAttributes>;
 
-    fn setattr(&mut self, path: &str, attr: FileAttr) -> Result<()>;
+    fn setattr(&mut self, path: &str, attr: ItemAttributes) -> Result<()>;
 
     fn mkdir(&mut self, path: &str, mode: u32) -> Result<()>;
 
@@ -69,7 +43,7 @@ pub trait Filesystem {
 
     fn flush(&mut self, path: &str) -> Result<()>;
 
-    fn readdir(&self, path: &str) -> Result<Vec<(String, FileType)>>;
+    fn readdir(&self, path: &str) -> Result<Vec<(String, String)>>;
 
     fn destroy(&mut self) -> Result<()>;
 }

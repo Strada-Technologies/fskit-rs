@@ -110,8 +110,10 @@ where
                                     println!("Received message: {request:?}");
                                     buf.advance(buf.len() - frozen.remaining());
 
-                                    let handler = &self.inner.read().await.handler;
-                                    let content = handler.handle(request.content.unwrap()).ok();
+                                    let content = {
+                                        let handler = &mut self.inner.write().await.handler;
+                                        handler.handle(request.content.unwrap()).ok()
+                                    };
 
                                     let response = Response {
                                         request_id: request.id,

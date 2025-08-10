@@ -6,6 +6,7 @@ edition = "2024"
 [dependencies]
 bytes = "1.10"
 prost = "0.14"
+prost-types = "0.14"
 thiserror = "2.0"
 tokio = { version = "1.47", features = ["net", "rt", "rt-multi-thread", "macros", "process", "sync", "io-util"] }
 

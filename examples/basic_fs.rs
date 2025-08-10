@@ -1,29 +1,30 @@
+use std::ffi::OsStr;
 use std::path::Path;
 
 use tokio::sync::oneshot;
 
-use fskit_rs::{Capabilities, FileAttr, FileType, Filesystem, Result};
+use fskit_rs::{Filesystem, ItemAttributes, Result, VolumeCapabilities};
 
 struct FsHandler;
 
 impl Filesystem for FsHandler {
-    fn set_vol_caps(&self) -> Result<Capabilities> {
-        Ok(Capabilities::default())
+    fn set_vol_caps(&self) -> Result<VolumeCapabilities> {
+        Ok(VolumeCapabilities::default())
     }
 
     fn init(&mut self) -> Result<()> {
         todo!()
     }
 
-    fn lookup(&self, parent: &str, name: &str) -> Result<FileAttr> {
+    fn lookup(&mut self, parent: u64, name: &OsStr) -> Result<ItemAttributes> {
         todo!()
     }
 
-    fn getattr(&self, path: &str) -> Result<FileAttr> {
+    fn getattr(&self, path: &str) -> Result<ItemAttributes> {
         todo!()
     }
 
-    fn setattr(&mut self, path: &str, attr: FileAttr) -> Result<()> {
+    fn setattr(&mut self, path: &str, attr: ItemAttributes) -> Result<()> {
         todo!()
     }
 
@@ -59,7 +60,7 @@ impl Filesystem for FsHandler {
         todo!()
     }
 
-    fn readdir(&self, path: &str) -> Result<Vec<(String, FileType)>> {
+    fn readdir(&self, path: &str) -> Result<Vec<(String, String)>> {
         todo!()
     }
 
