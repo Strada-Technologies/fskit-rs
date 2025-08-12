@@ -2,7 +2,7 @@ use std::ffi::OsString;
 use std::os::unix::ffi::OsStringExt;
 
 use crate::error::Result;
-use crate::pb::{request, response};
+use crate::pb::{PosixError, request, response};
 use crate::{Error, Filesystem};
 
 #[derive(Debug)]
@@ -23,18 +23,23 @@ where
 
     pub(super) fn handle(&mut self, request: request::Content) -> Result<response::Content> {
         Ok(match request {
-            request::Content::SetVolCaps(_) => {
-                response::Content::VolumeCapabilities(self.filesystem.set_vol_caps()?)
+            request::Content::GetVolumeCapabilities(_) => {
+                response::Content::VolumeCapabilities(self.filesystem.get_volume_capabilities()?)
             }
-            request::Content::Lookup(msg) => {
+            request::Content::GetAttributes(msg) => {
+                match self.filesystem.get_attributes(msg.file_id) {
+                    Ok(attrs) => response::Content::ItemAttributes(attrs),
+                    Err(Error::POSIX(code)) => response::Content::PosixError(PosixError { code }),
+                    Err(err) => return Err(err),
+                }
+            }
+            request::Content::LookupItem(msg) => {
                 match self
                     .filesystem
-                    .lookup(msg.parent, &OsString::from_vec(msg.name))
+                    .lookup_item(msg.parent_id, &OsString::from_vec(msg.name))
                 {
                     Ok(attrs) => response::Content::ItemAttributes(attrs),
-                    Err(Error::POSIX(code)) => {
-                        response::Content::PosixError(response::PosixError { code })
-                    }
+                    Err(Error::POSIX(code)) => response::Content::PosixError(PosixError { code }),
                     Err(err) => return Err(err),
                 }
             }

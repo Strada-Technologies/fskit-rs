@@ -1,6 +1,6 @@
 use std::io::Result;
 
 fn main() -> Result<()> {
-    prost_build::compile_protos(&["src/socket/message.proto"], &["src/socket"])?;
+    prost_build::compile_protos(&["src/socket/protocol.proto"], &["src/socket"])?;
     Ok(())
 }

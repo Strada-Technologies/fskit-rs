@@ -8,63 +8,15 @@ use fskit_rs::{Filesystem, ItemAttributes, Result, VolumeCapabilities};
 struct FsHandler;
 
 impl Filesystem for FsHandler {
-    fn set_vol_caps(&self) -> Result<VolumeCapabilities> {
-        Ok(VolumeCapabilities::default())
-    }
-
-    fn init(&mut self) -> Result<()> {
+    fn get_volume_capabilities(&self) -> Result<VolumeCapabilities> {
         todo!()
     }
 
-    fn lookup(&mut self, parent: u64, name: &OsStr) -> Result<ItemAttributes> {
+    fn get_attributes(&self, file_id: u64) -> Result<ItemAttributes> {
         todo!()
     }
 
-    fn getattr(&self, path: &str) -> Result<ItemAttributes> {
-        todo!()
-    }
-
-    fn setattr(&mut self, path: &str, attr: ItemAttributes) -> Result<()> {
-        todo!()
-    }
-
-    fn mkdir(&mut self, path: &str, mode: u32) -> Result<()> {
-        todo!()
-    }
-
-    fn unlink(&mut self, path: &str) -> Result<()> {
-        todo!()
-    }
-
-    fn rmdir(&mut self, path: &str) -> Result<()> {
-        todo!()
-    }
-
-    fn rename(&mut self, old: &str, new: &str) -> Result<()> {
-        todo!()
-    }
-
-    fn open(&self, path: &str, flags: i32) -> Result<()> {
-        todo!()
-    }
-
-    fn read(&self, path: &str, offset: u64, size: u32) -> Result<Vec<u8>> {
-        todo!()
-    }
-
-    fn write(&mut self, path: &str, offset: u64, data: &[u8]) -> Result<u32> {
-        todo!()
-    }
-
-    fn flush(&mut self, path: &str) -> Result<()> {
-        todo!()
-    }
-
-    fn readdir(&self, path: &str) -> Result<Vec<(String, String)>> {
-        todo!()
-    }
-
-    fn destroy(&mut self) -> Result<()> {
+    fn lookup_item(&mut self, parent_id: u64, name: &OsStr) -> Result<ItemAttributes> {
         todo!()
     }
 }
