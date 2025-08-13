@@ -2,8 +2,8 @@ use std::ffi::OsString;
 use std::os::unix::ffi::OsStringExt;
 
 use crate::error::Result;
-use crate::pb::{PosixError, request, response};
-use crate::{Error, Filesystem};
+use crate::pb::{request, response};
+use crate::{Error, Filesystem, ItemType};
 
 #[derive(Debug)]
 pub(super) struct Handler<FS>
@@ -21,25 +21,58 @@ where
         Self { filesystem }
     }
 
-    pub(super) fn handle(&mut self, request: request::Content) -> Result<response::Content> {
+    pub(super) async fn handle(&mut self, request: request::Content) -> Result<response::Content> {
         Ok(match request {
             request::Content::GetVolumeCapabilities(_) => {
-                response::Content::VolumeCapabilities(self.filesystem.get_volume_capabilities()?)
+                response::Content::GetVolumeCapabilities(response::GetVolumeCapabilities {
+                    capabilities: Some(self.filesystem.get_volume_capabilities().await?),
+                })
             }
             request::Content::GetAttributes(msg) => {
-                match self.filesystem.get_attributes(msg.file_id) {
-                    Ok(attrs) => response::Content::ItemAttributes(attrs),
-                    Err(Error::POSIX(code)) => response::Content::PosixError(PosixError { code }),
+                match self.filesystem.get_attributes(msg.file_id).await {
+                    Ok(attrs) => response::Content::GetAttributes(response::GetAttributes {
+                        attributes: Some(attrs),
+                    }),
+                    Err(Error::POSIX(code)) => {
+                        response::Content::PosixError(response::PosixError { code })
+                    }
                     Err(err) => return Err(err),
                 }
             }
             request::Content::LookupItem(msg) => {
                 match self
                     .filesystem
-                    .lookup_item(msg.parent_id, &OsString::from_vec(msg.name))
+                    .lookup_item(&OsString::from_vec(msg.name), msg.parent_id)
+                    .await
                 {
-                    Ok(attrs) => response::Content::ItemAttributes(attrs),
-                    Err(Error::POSIX(code)) => response::Content::PosixError(PosixError { code }),
+                    Ok((attrs, name)) => response::Content::LookupItem(response::LookupItem {
+                        attributes: Some(attrs),
+                        name: name.into_vec(),
+                    }),
+                    Err(Error::POSIX(code)) => {
+                        response::Content::PosixError(response::PosixError { code })
+                    }
+                    Err(err) => return Err(err),
+                }
+            }
+            request::Content::CreateItem(msg) => {
+                match self
+                    .filesystem
+                    .create_item(
+                        &OsString::from_vec(msg.name),
+                        ItemType::try_from(msg.r#type).unwrap(),
+                        msg.parent_id,
+                        msg.attributes.unwrap(),
+                    )
+                    .await
+                {
+                    Ok((attrs, name)) => response::Content::CreateItem(response::CreateItem {
+                        attributes: Some(attrs),
+                        name: name.into_vec(),
+                    }),
+                    Err(Error::POSIX(code)) => {
+                        response::Content::PosixError(response::PosixError { code })
+                    }
                     Err(err) => return Err(err),
                 }
             }

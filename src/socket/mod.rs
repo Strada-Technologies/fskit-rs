@@ -112,7 +112,7 @@ where
 
                                     let content = {
                                         let handler = &mut self.inner.write().await.handler;
-                                        handler.handle(request.content.unwrap()).ok()
+                                        handler.handle(request.content.unwrap()).await.ok()
                                     };
 
                                     let response = Response {

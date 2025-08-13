@@ -1,5 +1,7 @@
-use std::ffi::OsStr;
+use std::ffi::{OsStr, OsString};
 use std::path::Path;
+
+use async_trait::async_trait;
 
 pub use crate::error::{Error, Result};
 pub use crate::pb::{ItemAttributes, ItemType, VolumeCapabilities, VolumeCaseFormat};
@@ -15,15 +17,29 @@ mod pb {
     include!(concat!(env!("OUT_DIR"), "/_.rs"));
 }
 
+#[async_trait]
 pub trait Filesystem {
     /// A property that provides the supported capabilities of the volume.
-    fn get_volume_capabilities(&self) -> Result<VolumeCapabilities>;
+    async fn get_volume_capabilities(&mut self) -> Result<VolumeCapabilities>;
 
     /// Fetches attributes for the given item.
-    fn get_attributes(&self, file_id: u64) -> Result<ItemAttributes>;
+    async fn get_attributes(&mut self, file_id: u64) -> Result<ItemAttributes>;
 
     /// Looks up an item within a directory.
-    fn lookup_item(&mut self, parent_id: u64, name: &OsStr) -> Result<ItemAttributes>;
+    async fn lookup_item(
+        &mut self,
+        name: &OsStr,
+        parent_id: u64,
+    ) -> Result<(ItemAttributes, OsString)>;
+
+    /// Creates a new file or directory item.
+    async fn create_item(
+        &mut self,
+        name: &OsStr,
+        r#type: ItemType,
+        parent_id: u64,
+        attributes: ItemAttributes,
+    ) -> Result<(ItemAttributes, OsString)>;
 }
 
 /// Mount the given filesystem to the given mountpoint. This function spawns

@@ -1,22 +1,38 @@
-use std::ffi::OsStr;
+use std::ffi::{OsStr, OsString};
 use std::path::Path;
 
+use async_trait::async_trait;
 use tokio::sync::oneshot;
 
-use fskit_rs::{Filesystem, ItemAttributes, Result, VolumeCapabilities};
+use fskit_rs::{Filesystem, ItemAttributes, ItemType, Result, VolumeCapabilities};
 
 struct FsHandler;
 
+#[async_trait]
 impl Filesystem for FsHandler {
-    fn get_volume_capabilities(&self) -> Result<VolumeCapabilities> {
+    async fn get_volume_capabilities(&mut self) -> Result<VolumeCapabilities> {
         todo!()
     }
 
-    fn get_attributes(&self, file_id: u64) -> Result<ItemAttributes> {
+    async fn get_attributes(&mut self, file_id: u64) -> Result<ItemAttributes> {
         todo!()
     }
 
-    fn lookup_item(&mut self, parent_id: u64, name: &OsStr) -> Result<ItemAttributes> {
+    async fn lookup_item(
+        &mut self,
+        name: &OsStr,
+        parent_id: u64,
+    ) -> Result<(ItemAttributes, OsString)> {
+        todo!()
+    }
+
+    async fn create_item(
+        &mut self,
+        name: &OsStr,
+        r#type: ItemType,
+        parent_id: u64,
+        attributes: ItemAttributes,
+    ) -> Result<(ItemAttributes, OsString)> {
         todo!()
     }
 }
