@@ -4,7 +4,7 @@ use std::path::Path;
 use async_trait::async_trait;
 use tokio::sync::oneshot;
 
-use fskit_rs::{Filesystem, ItemAttributes, ItemType, Result, VolumeCapabilities};
+use fskit_rs::{Filesystem, ItemAttributes, ItemType, OpenMode, Result, VolumeCapabilities};
 
 struct FsHandler;
 
@@ -33,6 +33,14 @@ impl Filesystem for FsHandler {
         parent_id: u64,
         attributes: ItemAttributes,
     ) -> Result<(ItemAttributes, OsString)> {
+        todo!()
+    }
+
+    async fn open_item(&mut self, attrs: ItemAttributes, modes: Vec<OpenMode>) -> Result<()> {
+        todo!()
+    }
+
+    async fn close_item(&mut self, attrs: ItemAttributes, modes: Vec<OpenMode>) -> Result<()> {
         todo!()
     }
 }

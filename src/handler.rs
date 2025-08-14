@@ -3,7 +3,7 @@ use std::os::unix::ffi::OsStringExt;
 
 use crate::error::Result;
 use crate::pb::{request, response};
-use crate::{Error, Filesystem, ItemType};
+use crate::{Error, Filesystem, ItemType, OpenMode};
 
 #[derive(Debug)]
 pub(super) struct Handler<FS>
@@ -76,6 +76,39 @@ where
                     Err(err) => return Err(err),
                 }
             }
+            request::Content::OpenItem(msg) => {
+                match self
+                    .filesystem
+                    .open_item(msg.attributes.unwrap(), to_open_modes(msg.modes))
+                    .await
+                {
+                    Ok(_) => response::Content::Success(response::Success {}),
+                    Err(Error::POSIX(code)) => {
+                        response::Content::PosixError(response::PosixError { code })
+                    }
+                    Err(err) => return Err(err),
+                }
+            }
+            request::Content::CloseItem(msg) => {
+                match self
+                    .filesystem
+                    .close_item(msg.attributes.unwrap(), to_open_modes(msg.modes))
+                    .await
+                {
+                    Ok(_) => response::Content::Success(response::Success {}),
+                    Err(Error::POSIX(code)) => {
+                        response::Content::PosixError(response::PosixError { code })
+                    }
+                    Err(err) => return Err(err),
+                }
+            }
         })
     }
+}
+
+fn to_open_modes(modes: Vec<i32>) -> Vec<OpenMode> {
+    modes
+        .iter()
+        .map(|&v| OpenMode::try_from(v).unwrap_or_default())
+        .collect()
 }

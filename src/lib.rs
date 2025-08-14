@@ -4,7 +4,7 @@ use std::path::Path;
 use async_trait::async_trait;
 
 pub use crate::error::{Error, Result};
-pub use crate::pb::{ItemAttributes, ItemType, VolumeCapabilities, VolumeCaseFormat};
+pub use crate::pb::{CaseFormat, ItemAttributes, ItemType, OpenMode, VolumeCapabilities};
 use crate::session::Session;
 
 mod error;
@@ -40,6 +40,12 @@ pub trait Filesystem {
         parent_id: u64,
         attributes: ItemAttributes,
     ) -> Result<(ItemAttributes, OsString)>;
+
+    /// Opens a file for access.
+    async fn open_item(&mut self, attrs: ItemAttributes, modes: Vec<OpenMode>) -> Result<()>;
+
+    /// Closes a file from further access.
+    async fn close_item(&mut self, attrs: ItemAttributes, modes: Vec<OpenMode>) -> Result<()>;
 }
 
 /// Mount the given filesystem to the given mountpoint. This function spawns
