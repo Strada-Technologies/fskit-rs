@@ -23,16 +23,12 @@ where
 
     pub(super) async fn handle(&mut self, request: request::Content) -> Result<response::Content> {
         Ok(match request {
-            request::Content::GetVolumeCapabilities(_) => {
-                response::Content::GetVolumeCapabilities(response::GetVolumeCapabilities {
-                    capabilities: Some(self.filesystem.get_volume_capabilities().await?),
-                })
-            }
+            request::Content::GetVolumeCapabilities(_) => response::Content::VolumeCapabilities(
+                self.filesystem.get_volume_capabilities().await?,
+            ),
             request::Content::GetAttributes(msg) => {
-                match self.filesystem.get_attributes(msg.file_id).await {
-                    Ok(attrs) => response::Content::GetAttributes(response::GetAttributes {
-                        attributes: Some(attrs),
-                    }),
+                match self.filesystem.get_attributes(msg.item_id).await {
+                    Ok(attrs) => response::Content::ItemAttributes(attrs),
                     Err(Error::POSIX(code)) => {
                         response::Content::PosixError(response::PosixError { code })
                     }
@@ -45,10 +41,7 @@ where
                     .lookup_item(&OsString::from_vec(msg.name), msg.parent_id)
                     .await
                 {
-                    Ok((attrs, name)) => response::Content::LookupItem(response::LookupItem {
-                        attributes: Some(attrs),
-                        name: name.into_vec(),
-                    }),
+                    Ok(item) => response::Content::Item(item),
                     Err(Error::POSIX(code)) => {
                         response::Content::PosixError(response::PosixError { code })
                     }
@@ -66,10 +59,7 @@ where
                     )
                     .await
                 {
-                    Ok((attrs, name)) => response::Content::CreateItem(response::CreateItem {
-                        attributes: Some(attrs),
-                        name: name.into_vec(),
-                    }),
+                    Ok(item) => response::Content::Item(item),
                     Err(Error::POSIX(code)) => {
                         response::Content::PosixError(response::PosixError { code })
                     }
@@ -79,7 +69,7 @@ where
             request::Content::OpenItem(msg) => {
                 match self
                     .filesystem
-                    .open_item(msg.attributes.unwrap(), to_open_modes(msg.modes))
+                    .open_item(msg.item_id, to_open_modes(msg.modes))
                     .await
                 {
                     Ok(_) => response::Content::Success(response::Success {}),
@@ -92,7 +82,7 @@ where
             request::Content::CloseItem(msg) => {
                 match self
                     .filesystem
-                    .close_item(msg.attributes.unwrap(), to_open_modes(msg.modes))
+                    .close_item(msg.item_id, to_open_modes(msg.modes))
                     .await
                 {
                     Ok(_) => response::Content::Success(response::Success {}),
@@ -102,6 +92,28 @@ where
                     Err(err) => return Err(err),
                 }
             }
+            request::Content::Read(msg) => match self
+                .filesystem
+                .read(msg.item_id, msg.offset, msg.length)
+                .await
+            {
+                Ok(bytes) => response::Content::Buffer(bytes.to_vec()),
+                Err(Error::POSIX(code)) => {
+                    response::Content::PosixError(response::PosixError { code })
+                }
+                Err(err) => return Err(err),
+            },
+            request::Content::Write(msg) => match self
+                .filesystem
+                .write(msg.contents, msg.item_id, msg.offset)
+                .await
+            {
+                Ok(count) => response::Content::ByteCount(count),
+                Err(Error::POSIX(code)) => {
+                    response::Content::PosixError(response::PosixError { code })
+                }
+                Err(err) => return Err(err),
+            },
         })
     }
 }

@@ -1,10 +1,10 @@
-use std::ffi::{OsStr, OsString};
+use std::ffi::OsStr;
 use std::path::Path;
 
 use async_trait::async_trait;
 use tokio::sync::oneshot;
 
-use fskit_rs::{Filesystem, ItemAttributes, ItemType, OpenMode, Result, VolumeCapabilities};
+use fskit_rs::{Filesystem, Item, ItemAttributes, ItemType, OpenMode, Result, VolumeCapabilities};
 
 struct FsHandler;
 
@@ -14,15 +14,11 @@ impl Filesystem for FsHandler {
         todo!()
     }
 
-    async fn get_attributes(&mut self, file_id: u64) -> Result<ItemAttributes> {
+    async fn get_attributes(&mut self, item_id: u64) -> Result<ItemAttributes> {
         todo!()
     }
 
-    async fn lookup_item(
-        &mut self,
-        name: &OsStr,
-        parent_id: u64,
-    ) -> Result<(ItemAttributes, OsString)> {
+    async fn lookup_item(&mut self, name: &OsStr, parent_id: u64) -> Result<Item> {
         todo!()
     }
 
@@ -32,15 +28,23 @@ impl Filesystem for FsHandler {
         r#type: ItemType,
         parent_id: u64,
         attributes: ItemAttributes,
-    ) -> Result<(ItemAttributes, OsString)> {
+    ) -> Result<Item> {
         todo!()
     }
 
-    async fn open_item(&mut self, attrs: ItemAttributes, modes: Vec<OpenMode>) -> Result<()> {
+    async fn open_item(&mut self, item_id: u64, modes: Vec<OpenMode>) -> Result<()> {
         todo!()
     }
 
-    async fn close_item(&mut self, attrs: ItemAttributes, modes: Vec<OpenMode>) -> Result<()> {
+    async fn close_item(&mut self, item_id: u64, modes: Vec<OpenMode>) -> Result<()> {
+        todo!()
+    }
+
+    async fn read(&mut self, item_id: u64, offset: i64, length: i64) -> Result<Vec<u8>> {
+        todo!()
+    }
+
+    async fn write(&mut self, contents: Vec<u8>, item_id: u64, offset: i64) -> Result<i64> {
         todo!()
     }
 }

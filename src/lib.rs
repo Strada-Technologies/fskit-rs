@@ -1,9 +1,10 @@
-use std::ffi::{OsStr, OsString};
+use std::ffi::OsStr;
 use std::path::Path;
 
 use async_trait::async_trait;
 
 pub use crate::error::{Error, Result};
+pub use crate::pb::response::Item;
 pub use crate::pb::{CaseFormat, ItemAttributes, ItemType, OpenMode, VolumeCapabilities};
 use crate::session::Session;
 
@@ -23,14 +24,10 @@ pub trait Filesystem {
     async fn get_volume_capabilities(&mut self) -> Result<VolumeCapabilities>;
 
     /// Fetches attributes for the given item.
-    async fn get_attributes(&mut self, file_id: u64) -> Result<ItemAttributes>;
+    async fn get_attributes(&mut self, item_id: u64) -> Result<ItemAttributes>;
 
     /// Looks up an item within a directory.
-    async fn lookup_item(
-        &mut self,
-        name: &OsStr,
-        parent_id: u64,
-    ) -> Result<(ItemAttributes, OsString)>;
+    async fn lookup_item(&mut self, name: &OsStr, parent_id: u64) -> Result<Item>;
 
     /// Creates a new file or directory item.
     async fn create_item(
@@ -39,13 +36,19 @@ pub trait Filesystem {
         r#type: ItemType,
         parent_id: u64,
         attributes: ItemAttributes,
-    ) -> Result<(ItemAttributes, OsString)>;
+    ) -> Result<Item>;
 
     /// Opens a file for access.
-    async fn open_item(&mut self, attrs: ItemAttributes, modes: Vec<OpenMode>) -> Result<()>;
+    async fn open_item(&mut self, item_id: u64, modes: Vec<OpenMode>) -> Result<()>;
 
     /// Closes a file from further access.
-    async fn close_item(&mut self, attrs: ItemAttributes, modes: Vec<OpenMode>) -> Result<()>;
+    async fn close_item(&mut self, item_id: u64, modes: Vec<OpenMode>) -> Result<()>;
+
+    /// Reads the contents of the given file item.
+    async fn read(&mut self, item_id: u64, offset: i64, length: i64) -> Result<Vec<u8>>;
+
+    /// Writes contents to the given file item.
+    async fn write(&mut self, contents: Vec<u8>, item_id: u64, offset: i64) -> Result<i64>;
 }
 
 /// Mount the given filesystem to the given mountpoint. This function spawns
