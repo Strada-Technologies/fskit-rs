@@ -66,6 +66,19 @@ where
                     Err(err) => return Err(err),
                 }
             }
+            request::Content::EnumerateDirectory(msg) => {
+                match self
+                    .filesystem
+                    .enumerate_directory(msg.item_id, msg.cookie, msg.verifier)
+                    .await
+                {
+                    Ok(entries) => response::Content::DirectoryEntries(entries),
+                    Err(Error::POSIX(code)) => {
+                        response::Content::PosixError(response::PosixError { code })
+                    }
+                    Err(err) => return Err(err),
+                }
+            }
             request::Content::OpenItem(msg) => {
                 match self
                     .filesystem
@@ -97,7 +110,7 @@ where
                 .read(msg.item_id, msg.offset, msg.length)
                 .await
             {
-                Ok(bytes) => response::Content::Buffer(bytes.to_vec()),
+                Ok(buffer) => response::Content::Buffer(buffer),
                 Err(Error::POSIX(code)) => {
                     response::Content::PosixError(response::PosixError { code })
                 }

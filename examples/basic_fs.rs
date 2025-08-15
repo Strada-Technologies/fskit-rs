@@ -4,7 +4,10 @@ use std::path::Path;
 use async_trait::async_trait;
 use tokio::sync::oneshot;
 
-use fskit_rs::{Filesystem, Item, ItemAttributes, ItemType, OpenMode, Result, VolumeCapabilities};
+use fskit_rs::{
+    DirectoryEntries, Filesystem, Item, ItemAttributes, ItemType, OpenMode, Result,
+    VolumeCapabilities,
+};
 
 struct FsHandler;
 
@@ -29,6 +32,15 @@ impl Filesystem for FsHandler {
         parent_id: u64,
         attributes: ItemAttributes,
     ) -> Result<Item> {
+        todo!()
+    }
+
+    async fn enumerate_directory(
+        &mut self,
+        item_id: u64,
+        cookie: u64,
+        verifier: u64,
+    ) -> Result<DirectoryEntries> {
         todo!()
     }
 

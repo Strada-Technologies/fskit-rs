@@ -4,7 +4,7 @@ use std::path::Path;
 use async_trait::async_trait;
 
 pub use crate::error::{Error, Result};
-pub use crate::pb::response::Item;
+pub use crate::pb::response::{DirectoryEntries, Item, directory_entries};
 pub use crate::pb::{CaseFormat, ItemAttributes, ItemType, OpenMode, VolumeCapabilities};
 use crate::session::Session;
 
@@ -37,6 +37,14 @@ pub trait Filesystem {
         parent_id: u64,
         attributes: ItemAttributes,
     ) -> Result<Item>;
+
+    /// Enumerates the contents of the given directory.
+    async fn enumerate_directory(
+        &mut self,
+        item_id: u64,
+        cookie: u64,
+        verifier: u64,
+    ) -> Result<DirectoryEntries>;
 
     /// Opens a file for access.
     async fn open_item(&mut self, item_id: u64, modes: Vec<OpenMode>) -> Result<()>;
