@@ -29,7 +29,20 @@ where
             request::Content::GetAttributes(msg) => {
                 match self.filesystem.get_attributes(msg.item_id).await {
                     Ok(attrs) => response::Content::ItemAttributes(attrs),
-                    Err(Error::POSIX(code)) => {
+                    Err(Error::Posix(code)) => {
+                        response::Content::PosixError(response::PosixError { code })
+                    }
+                    Err(err) => return Err(err),
+                }
+            }
+            request::Content::SetAttributes(msg) => {
+                match self
+                    .filesystem
+                    .set_attributes(msg.item_id, msg.attributes.unwrap())
+                    .await
+                {
+                    Ok(attrs) => response::Content::ItemAttributes(attrs),
+                    Err(Error::Posix(code)) => {
                         response::Content::PosixError(response::PosixError { code })
                     }
                     Err(err) => return Err(err),
@@ -42,7 +55,7 @@ where
                     .await
                 {
                     Ok(item) => response::Content::Item(item),
-                    Err(Error::POSIX(code)) => {
+                    Err(Error::Posix(code)) => {
                         response::Content::PosixError(response::PosixError { code })
                     }
                     Err(err) => return Err(err),
@@ -60,7 +73,7 @@ where
                     .await
                 {
                     Ok(item) => response::Content::Item(item),
-                    Err(Error::POSIX(code)) => {
+                    Err(Error::Posix(code)) => {
                         response::Content::PosixError(response::PosixError { code })
                     }
                     Err(err) => return Err(err),
@@ -73,7 +86,7 @@ where
                     .await
                 {
                     Ok(entries) => response::Content::DirectoryEntries(entries),
-                    Err(Error::POSIX(code)) => {
+                    Err(Error::Posix(code)) => {
                         response::Content::PosixError(response::PosixError { code })
                     }
                     Err(err) => return Err(err),
@@ -86,7 +99,7 @@ where
                     .await
                 {
                     Ok(_) => response::Content::Success(response::Success {}),
-                    Err(Error::POSIX(code)) => {
+                    Err(Error::Posix(code)) => {
                         response::Content::PosixError(response::PosixError { code })
                     }
                     Err(err) => return Err(err),
@@ -99,7 +112,7 @@ where
                     .await
                 {
                     Ok(_) => response::Content::Success(response::Success {}),
-                    Err(Error::POSIX(code)) => {
+                    Err(Error::Posix(code)) => {
                         response::Content::PosixError(response::PosixError { code })
                     }
                     Err(err) => return Err(err),
@@ -111,7 +124,7 @@ where
                 .await
             {
                 Ok(buffer) => response::Content::Buffer(buffer),
-                Err(Error::POSIX(code)) => {
+                Err(Error::Posix(code)) => {
                     response::Content::PosixError(response::PosixError { code })
                 }
                 Err(err) => return Err(err),
@@ -122,7 +135,7 @@ where
                 .await
             {
                 Ok(count) => response::Content::ByteCount(count),
-                Err(Error::POSIX(code)) => {
+                Err(Error::Posix(code)) => {
                     response::Content::PosixError(response::PosixError { code })
                 }
                 Err(err) => return Err(err),

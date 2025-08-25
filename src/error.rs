@@ -15,5 +15,5 @@ pub enum Error {
     UnmountFailed,
 
     #[error("POSIX error: {0}")]
-    POSIX(std::ffi::c_int),
+    Posix(std::ffi::c_int),
 }

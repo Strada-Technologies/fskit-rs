@@ -26,6 +26,13 @@ pub trait Filesystem {
     /// Fetches attributes for the given item.
     async fn get_attributes(&mut self, item_id: u64) -> Result<ItemAttributes>;
 
+    /// Sets the given attributes on an item.
+    async fn set_attributes(
+        &mut self,
+        item_id: u64,
+        attributes: ItemAttributes,
+    ) -> Result<ItemAttributes>;
+
     /// Looks up an item within a directory.
     async fn lookup_item(&mut self, name: &OsStr, parent_id: u64) -> Result<Item>;
 

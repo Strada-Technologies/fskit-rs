@@ -21,6 +21,14 @@ impl Filesystem for FsHandler {
         todo!()
     }
 
+    async fn set_attributes(
+        &mut self,
+        item_id: u64,
+        attributes: ItemAttributes,
+    ) -> Result<ItemAttributes> {
+        todo!()
+    }
+
     async fn lookup_item(&mut self, name: &OsStr, parent_id: u64) -> Result<Item> {
         todo!()
     }
