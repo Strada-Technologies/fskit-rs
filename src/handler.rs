@@ -54,7 +54,7 @@ where
             request::Content::LookupItem(msg) => {
                 match self
                     .filesystem
-                    .lookup_item(&OsString::from_vec(msg.name), msg.parent_id)
+                    .lookup_item(&OsString::from_vec(msg.name), msg.directory_id)
                     .await
                 {
                     Ok(item) => response::Content::Item(item),
@@ -70,7 +70,7 @@ where
                     .create_item(
                         &OsString::from_vec(msg.name),
                         ItemType::try_from(msg.r#type).unwrap(),
-                        msg.parent_id,
+                        msg.directory_id,
                         msg.attributes.unwrap(),
                     )
                     .await
@@ -82,6 +82,24 @@ where
                     Err(err) => return Err(err),
                 }
             }
+            request::Content::RenameItem(msg) => match self
+                .filesystem
+                .rename_item(
+                    msg.item_id,
+                    msg.source_directory_id,
+                    &OsString::from_vec(msg.source_name),
+                    &OsString::from_vec(msg.destination_name),
+                    msg.destination_directory_id,
+                    msg.over_item_id,
+                )
+                .await
+            {
+                Ok(data) => response::Content::Data(data),
+                Err(Error::Posix(code)) => {
+                    response::Content::PosixError(response::PosixError { code })
+                }
+                Err(err) => return Err(err),
+            },
             request::Content::EnumerateDirectory(msg) => {
                 match self
                     .filesystem

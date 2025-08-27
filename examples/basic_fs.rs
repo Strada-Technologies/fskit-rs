@@ -33,7 +33,7 @@ impl Filesystem for FsHandler {
         Err(Error::Posix(libc::ENOSYS))
     }
 
-    async fn lookup_item(&mut self, _name: &OsStr, _parent_id: u64) -> Result<Item> {
+    async fn lookup_item(&mut self, _name: &OsStr, _directory_id: u64) -> Result<Item> {
         Err(Error::Posix(libc::ENOSYS))
     }
 
@@ -41,9 +41,21 @@ impl Filesystem for FsHandler {
         &mut self,
         _name: &OsStr,
         _type: ItemType,
-        _parent_id: u64,
+        _directory_id: u64,
         _attributes: ItemAttributes,
     ) -> Result<Item> {
+        Err(Error::Posix(libc::ENOSYS))
+    }
+
+    async fn rename_item(
+        &mut self,
+        _item_id: u64,
+        _source_directory_id: u64,
+        _source_name: &OsStr,
+        _destination_name: &OsStr,
+        _destination_directory_id: u64,
+        _over_item_id: Option<u64>,
+    ) -> Result<Vec<u8>> {
         Err(Error::Posix(libc::ENOSYS))
     }
 

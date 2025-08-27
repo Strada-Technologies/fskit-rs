@@ -40,16 +40,27 @@ pub trait Filesystem {
     ) -> Result<ItemAttributes>;
 
     /// Looks up an item within a directory.
-    async fn lookup_item(&mut self, name: &OsStr, parent_id: u64) -> Result<Item>;
+    async fn lookup_item(&mut self, name: &OsStr, directory_id: u64) -> Result<Item>;
 
     /// Creates a new file or directory item.
     async fn create_item(
         &mut self,
         name: &OsStr,
         r#type: ItemType,
-        parent_id: u64,
+        directory_id: u64,
         attributes: ItemAttributes,
     ) -> Result<Item>;
+
+    /// Renames an item from one path in the file system to another.
+    async fn rename_item(
+        &mut self,
+        item_id: u64,
+        source_directory_id: u64,
+        source_name: &OsStr,
+        destination_name: &OsStr,
+        destination_directory_id: u64,
+        over_item_id: Option<u64>,
+    ) -> Result<Vec<u8>>;
 
     /// Enumerates the contents of the given directory.
     async fn enumerate_directory(
