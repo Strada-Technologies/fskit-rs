@@ -3,7 +3,7 @@ use std::os::unix::ffi::OsStringExt;
 
 use crate::error::Result;
 use crate::pb::{request, response};
-use crate::{Error, Filesystem, ItemType, OpenMode};
+use crate::{Error, Filesystem, ItemType, OpenMode, XattrPolicy};
 
 #[derive(Debug)]
 pub(super) struct Handler<FS>
@@ -92,6 +92,42 @@ where
                     Err(err) => return Err(err),
                 }
             }
+            request::Content::GetXattr(msg) => match self
+                .filesystem
+                .get_xattr(&OsString::from_vec(msg.name), msg.item_id)
+                .await
+            {
+                Ok(data) => response::Content::Data(data),
+                Err(Error::Posix(code)) => {
+                    response::Content::PosixError(response::PosixError { code })
+                }
+                Err(err) => return Err(err),
+            },
+            request::Content::SetXattr(msg) => match self
+                .filesystem
+                .set_xattr(
+                    &OsString::from_vec(msg.name),
+                    msg.value,
+                    msg.item_id,
+                    XattrPolicy::try_from(msg.policy).unwrap_or_default(),
+                )
+                .await
+            {
+                Ok(_) => response::Content::Success(response::Success {}),
+                Err(Error::Posix(code)) => {
+                    response::Content::PosixError(response::PosixError { code })
+                }
+                Err(err) => return Err(err),
+            },
+            request::Content::GetXattrs(msg) => {
+                match self.filesystem.get_xattrs(msg.item_id).await {
+                    Ok(xattrs) => response::Content::Xattrs(xattrs),
+                    Err(Error::Posix(code)) => {
+                        response::Content::PosixError(response::PosixError { code })
+                    }
+                    Err(err) => return Err(err),
+                }
+            }
             request::Content::OpenItem(msg) => {
                 match self
                     .filesystem
@@ -123,7 +159,7 @@ where
                 .read(msg.item_id, msg.offset, msg.length)
                 .await
             {
-                Ok(buffer) => response::Content::Buffer(buffer),
+                Ok(data) => response::Content::Data(data),
                 Err(Error::Posix(code)) => {
                     response::Content::PosixError(response::PosixError { code })
                 }

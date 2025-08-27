@@ -5,8 +5,8 @@ use async_trait::async_trait;
 use tokio::sync::oneshot;
 
 use fskit_rs::{
-    DirectoryEntries, Filesystem, Item, ItemAttributes, ItemType, OpenMode, Result,
-    VolumeCapabilities,
+    DirectoryEntries, Error, Filesystem, Item, ItemAttributes, ItemType, OpenMode, Result,
+    VolumeCapabilities, XattrPolicy, Xattrs,
 };
 
 struct FsHandler;
@@ -14,64 +14,82 @@ struct FsHandler;
 #[async_trait]
 impl Filesystem for FsHandler {
     async fn get_volume_capabilities(&mut self) -> Result<VolumeCapabilities> {
-        todo!()
+        Err(Error::Posix(libc::ENOSYS))
     }
 
-    async fn get_attributes(&mut self, item_id: u64) -> Result<ItemAttributes> {
-        todo!()
+    async fn get_attributes(&mut self, _item_id: u64) -> Result<ItemAttributes> {
+        Err(Error::Posix(libc::ENOSYS))
     }
 
     async fn set_attributes(
         &mut self,
-        item_id: u64,
-        attributes: ItemAttributes,
+        _item_id: u64,
+        _attributes: ItemAttributes,
     ) -> Result<ItemAttributes> {
-        todo!()
+        Err(Error::Posix(libc::ENOSYS))
     }
 
-    async fn lookup_item(&mut self, name: &OsStr, parent_id: u64) -> Result<Item> {
-        todo!()
+    async fn lookup_item(&mut self, _name: &OsStr, _parent_id: u64) -> Result<Item> {
+        Err(Error::Posix(libc::ENOSYS))
     }
 
     async fn create_item(
         &mut self,
-        name: &OsStr,
-        r#type: ItemType,
-        parent_id: u64,
-        attributes: ItemAttributes,
+        _name: &OsStr,
+        _type: ItemType,
+        _parent_id: u64,
+        _attributes: ItemAttributes,
     ) -> Result<Item> {
-        todo!()
+        Err(Error::Posix(libc::ENOSYS))
     }
 
     async fn enumerate_directory(
         &mut self,
-        item_id: u64,
-        cookie: u64,
-        verifier: u64,
+        _item_id: u64,
+        _cookie: u64,
+        _verifier: u64,
     ) -> Result<DirectoryEntries> {
-        todo!()
+        Err(Error::Posix(libc::ENOSYS))
     }
 
-    async fn open_item(&mut self, item_id: u64, modes: Vec<OpenMode>) -> Result<()> {
-        todo!()
+    async fn get_xattr(&mut self, _name: &OsStr, _item_id: u64) -> Result<Vec<u8>> {
+        Err(Error::Posix(libc::ENOSYS))
     }
 
-    async fn close_item(&mut self, item_id: u64, modes: Vec<OpenMode>) -> Result<()> {
-        todo!()
+    async fn set_xattr(
+        &mut self,
+        _name: &OsStr,
+        _value: Option<Vec<u8>>,
+        _item_id: u64,
+        _policy: XattrPolicy,
+    ) -> Result<()> {
+        Err(Error::Posix(libc::ENOSYS))
     }
 
-    async fn read(&mut self, item_id: u64, offset: i64, length: i64) -> Result<Vec<u8>> {
-        todo!()
+    async fn get_xattrs(&mut self, _item_id: u64) -> Result<Xattrs> {
+        Err(Error::Posix(libc::ENOSYS))
     }
 
-    async fn write(&mut self, contents: Vec<u8>, item_id: u64, offset: i64) -> Result<i64> {
-        todo!()
+    async fn open_item(&mut self, _item_id: u64, _modes: Vec<OpenMode>) -> Result<()> {
+        Err(Error::Posix(libc::ENOSYS))
+    }
+
+    async fn close_item(&mut self, _item_id: u64, _modes: Vec<OpenMode>) -> Result<()> {
+        Err(Error::Posix(libc::ENOSYS))
+    }
+
+    async fn read(&mut self, _item_id: u64, _offset: i64, _length: i64) -> Result<Vec<u8>> {
+        Err(Error::Posix(libc::ENOSYS))
+    }
+
+    async fn write(&mut self, _contents: Vec<u8>, _item_id: u64, _offset: i64) -> Result<i64> {
+        Err(Error::Posix(libc::ENOSYS))
     }
 }
 
 #[tokio::main]
 async fn main() {
-    let (stop_tx, stop_rx) = oneshot::channel::<()>();
+    let (_stop_tx, stop_rx) = oneshot::channel::<()>();
     tokio::task::spawn_blocking(move || {
         futures::executor::block_on(async {
             let handler = FsHandler;

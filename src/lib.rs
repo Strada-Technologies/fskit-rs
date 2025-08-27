@@ -4,8 +4,10 @@ use std::path::Path;
 use async_trait::async_trait;
 
 pub use crate::error::{Error, Result};
-pub use crate::pb::response::{DirectoryEntries, Item, directory_entries};
-pub use crate::pb::{CaseFormat, ItemAttributes, ItemType, OpenMode, VolumeCapabilities};
+pub use crate::pb::response::{DirectoryEntries, Item, Xattrs, directory_entries};
+pub use crate::pb::{
+    CaseFormat, ItemAttributes, ItemType, OpenMode, VolumeCapabilities, XattrPolicy,
+};
 use crate::session::Session;
 
 mod error;
@@ -52,6 +54,21 @@ pub trait Filesystem {
         cookie: u64,
         verifier: u64,
     ) -> Result<DirectoryEntries>;
+
+    /// Gets the specified extended attribute of the given item.
+    async fn get_xattr(&mut self, name: &OsStr, item_id: u64) -> Result<Vec<u8>>;
+
+    /// Sets the specified extended attribute data on the given item.
+    async fn set_xattr(
+        &mut self,
+        name: &OsStr,
+        value: Option<Vec<u8>>,
+        item_id: u64,
+        policy: XattrPolicy,
+    ) -> Result<()>;
+
+    /// Gets the list of extended attributes currently set on the given item.
+    async fn get_xattrs(&mut self, item_id: u64) -> Result<Xattrs>;
 
     /// Opens a file for access.
     async fn open_item(&mut self, item_id: u64, modes: Vec<OpenMode>) -> Result<()>;
