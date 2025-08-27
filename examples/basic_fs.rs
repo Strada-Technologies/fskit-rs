@@ -61,7 +61,7 @@ impl Filesystem for FsHandler {
 
     async fn enumerate_directory(
         &mut self,
-        _item_id: u64,
+        _directory_id: u64,
         _cookie: u64,
         _verifier: u64,
     ) -> Result<DirectoryEntries> {

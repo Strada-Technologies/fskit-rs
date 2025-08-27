@@ -103,7 +103,7 @@ where
             request::Content::EnumerateDirectory(msg) => {
                 match self
                     .filesystem
-                    .enumerate_directory(msg.item_id, msg.cookie, msg.verifier)
+                    .enumerate_directory(msg.directory_id, msg.cookie, msg.verifier)
                     .await
                 {
                     Ok(entries) => response::Content::DirectoryEntries(entries),

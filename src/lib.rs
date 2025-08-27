@@ -65,7 +65,7 @@ pub trait Filesystem {
     /// Enumerates the contents of the given directory.
     async fn enumerate_directory(
         &mut self,
-        item_id: u64,
+        directory_id: u64,
         cookie: u64,
         verifier: u64,
     ) -> Result<DirectoryEntries>;
