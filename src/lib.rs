@@ -6,7 +6,8 @@ use async_trait::async_trait;
 pub use crate::error::{Error, Result};
 pub use crate::pb::response::{DirectoryEntries, Item, Xattrs, directory_entries};
 pub use crate::pb::{
-    CaseFormat, ItemAttributes, ItemType, OpenMode, VolumeCapabilities, XattrPolicy,
+    CaseFormat, ItemAttributes, ItemType, OpenMode, PathConfOperations, SetXattrPolicy,
+    VolumeCapabilities, XattrOperations,
 };
 use crate::session::Session;
 
@@ -17,11 +18,14 @@ mod session;
 mod socket;
 
 mod pb {
-    include!(concat!(env!("OUT_DIR"), "/_.rs"));
+    include!(concat!(env!("OUT_DIR"), "/pb.rs"));
 }
 
 #[async_trait]
 pub trait Filesystem {
+    /// Properties implemented by volumes that support providing the values of system limits or options.
+    async fn get_path_conf_operations(&mut self) -> Result<PathConfOperations>;
+
     /// A property that provides the supported capabilities of the volume.
     async fn get_volume_capabilities(&mut self) -> Result<VolumeCapabilities>;
 
@@ -55,6 +59,9 @@ pub trait Filesystem {
         verifier: u64,
     ) -> Result<DirectoryEntries>;
 
+    /// Properties implemented by volumes that natively or partially support extended attributes.
+    async fn get_xattr_operations(&mut self) -> Result<XattrOperations>;
+
     /// Gets the specified extended attribute of the given item.
     async fn get_xattr(&mut self, name: &OsStr, item_id: u64) -> Result<Vec<u8>>;
 
@@ -64,7 +71,7 @@ pub trait Filesystem {
         name: &OsStr,
         value: Option<Vec<u8>>,
         item_id: u64,
-        policy: XattrPolicy,
+        policy: SetXattrPolicy,
     ) -> Result<()>;
 
     /// Gets the list of extended attributes currently set on the given item.

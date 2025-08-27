@@ -3,7 +3,7 @@ use std::os::unix::ffi::OsStringExt;
 
 use crate::error::Result;
 use crate::pb::{request, response};
-use crate::{Error, Filesystem, ItemType, OpenMode, XattrPolicy};
+use crate::{Error, Filesystem, ItemType, OpenMode, SetXattrPolicy};
 
 #[derive(Debug)]
 pub(super) struct Handler<FS>
@@ -23,6 +23,9 @@ where
 
     pub(super) async fn handle(&mut self, request: request::Content) -> Result<response::Content> {
         Ok(match request {
+            request::Content::GetPathConfOperations(_) => response::Content::PathConfOperations(
+                self.filesystem.get_path_conf_operations().await?,
+            ),
             request::Content::GetVolumeCapabilities(_) => response::Content::VolumeCapabilities(
                 self.filesystem.get_volume_capabilities().await?,
             ),
@@ -92,6 +95,9 @@ where
                     Err(err) => return Err(err),
                 }
             }
+            request::Content::GetXattrOperations(_) => {
+                response::Content::XattrOperations(self.filesystem.get_xattr_operations().await?)
+            }
             request::Content::GetXattr(msg) => match self
                 .filesystem
                 .get_xattr(&OsString::from_vec(msg.name), msg.item_id)
@@ -109,7 +115,7 @@ where
                     &OsString::from_vec(msg.name),
                     msg.value,
                     msg.item_id,
-                    XattrPolicy::try_from(msg.policy).unwrap_or_default(),
+                    SetXattrPolicy::try_from(msg.policy).unwrap_or_default(),
                 )
                 .await
             {

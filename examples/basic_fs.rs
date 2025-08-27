@@ -5,14 +5,18 @@ use async_trait::async_trait;
 use tokio::sync::oneshot;
 
 use fskit_rs::{
-    DirectoryEntries, Error, Filesystem, Item, ItemAttributes, ItemType, OpenMode, Result,
-    VolumeCapabilities, XattrPolicy, Xattrs,
+    DirectoryEntries, Error, Filesystem, Item, ItemAttributes, ItemType, OpenMode,
+    PathConfOperations, Result, SetXattrPolicy, VolumeCapabilities, XattrOperations, Xattrs,
 };
 
 struct FsHandler;
 
 #[async_trait]
 impl Filesystem for FsHandler {
+    async fn get_path_conf_operations(&mut self) -> Result<PathConfOperations> {
+        Err(Error::Posix(libc::ENOSYS))
+    }
+
     async fn get_volume_capabilities(&mut self) -> Result<VolumeCapabilities> {
         Err(Error::Posix(libc::ENOSYS))
     }
@@ -52,6 +56,10 @@ impl Filesystem for FsHandler {
         Err(Error::Posix(libc::ENOSYS))
     }
 
+    async fn get_xattr_operations(&mut self) -> Result<XattrOperations> {
+        Err(Error::Posix(libc::ENOSYS))
+    }
+
     async fn get_xattr(&mut self, _name: &OsStr, _item_id: u64) -> Result<Vec<u8>> {
         Err(Error::Posix(libc::ENOSYS))
     }
@@ -61,7 +69,7 @@ impl Filesystem for FsHandler {
         _name: &OsStr,
         _value: Option<Vec<u8>>,
         _item_id: u64,
-        _policy: XattrPolicy,
+        _policy: SetXattrPolicy,
     ) -> Result<()> {
         Err(Error::Posix(libc::ENOSYS))
     }
