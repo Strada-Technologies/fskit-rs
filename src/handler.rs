@@ -82,6 +82,17 @@ where
                     Err(err) => return Err(err),
                 }
             }
+            request::Content::RemoveItem(msg) => match self
+                .filesystem
+                .remove_item(msg.item_id, &OsString::from_vec(msg.name), msg.directory_id)
+                .await
+            {
+                Ok(_) => response::Content::Success(response::Success {}),
+                Err(Error::Posix(code)) => {
+                    response::Content::PosixError(response::PosixError { code })
+                }
+                Err(err) => return Err(err),
+            },
             request::Content::RenameItem(msg) => match self
                 .filesystem
                 .rename_item(

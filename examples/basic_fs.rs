@@ -47,6 +47,15 @@ impl Filesystem for FsHandler {
         Err(Error::Posix(libc::ENOSYS))
     }
 
+    async fn remove_item(
+        &mut self,
+        _item_id: u64,
+        _name: &OsStr,
+        _directory_id: u64,
+    ) -> Result<()> {
+        Err(Error::Posix(libc::ENOSYS))
+    }
+
     async fn rename_item(
         &mut self,
         _item_id: u64,

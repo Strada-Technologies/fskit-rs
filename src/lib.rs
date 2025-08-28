@@ -51,6 +51,9 @@ pub trait Filesystem {
         attributes: ItemAttributes,
     ) -> Result<Item>;
 
+    /// Removes an existing item from a given directory.
+    async fn remove_item(&mut self, item_id: u64, name: &OsStr, directory_id: u64) -> Result<()>;
+
     /// Renames an item from one path in the file system to another.
     async fn rename_item(
         &mut self,
