@@ -8,20 +8,15 @@ use crate::socket::Socket;
 
 /// The session data structure
 #[derive(Debug)]
-pub struct Session<FS>
-where
-    FS: Filesystem + Send + Sync + 'static,
-{
-    socket: Socket<FS>,
+pub struct Session {
+    socket: Socket,
     mounter: Option<Mounter>,
 }
 
-impl<FS> Session<FS>
-where
-    FS: Filesystem + Send + Sync + 'static,
-{
-    pub(super) async fn new<P>(filesystem: FS, mount_point: P) -> Result<Self>
+impl Session {
+    pub(super) async fn new<FS, P>(filesystem: FS, mount_point: P) -> Result<Self>
     where
+        FS: Filesystem + Send + Sync + Clone + 'static,
         P: AsRef<Path>,
     {
         let handler = Handler::new(filesystem);
@@ -30,9 +25,9 @@ where
 
         let mounter = match Mounter::mount(mount_point.as_ref().to_path_buf()) {
             Ok(mount) => mount,
-            Err(e) => {
+            Err(err) => {
                 socket.stop().await;
-                return Err(e);
+                return Err(err);
             }
         };
 
@@ -43,10 +38,7 @@ where
     }
 }
 
-impl<FS> Drop for Session<FS>
-where
-    FS: Filesystem + Send + Sync + 'static,
-{
+impl Drop for Session {
     fn drop(&mut self) {
         if let Some(mounter) = self.mounter.take() {
             mounter.unmount().unwrap();

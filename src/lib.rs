@@ -42,6 +42,9 @@ pub trait Filesystem {
     /// Looks up an item within a directory.
     async fn lookup_item(&mut self, name: &OsStr, directory_id: u64) -> Result<Item>;
 
+    /// Reclaims an item, releasing any resources allocated for the item.
+    async fn reclaim_item(&mut self, item_id: u64) -> Result<()>;
+
     /// Creates a new file or directory item.
     async fn create_item(
         &mut self,
@@ -108,9 +111,9 @@ pub trait Filesystem {
 /// a background thread to handle filesystem operations while being mounted.
 /// The returned handle should be stored to reference the mounted filesystem.
 /// If it's dropped, the filesystem will be unmounted.
-pub async fn mount<FS, P>(filesystem: FS, mount_point: P) -> Result<Session<FS>>
+pub async fn mount<FS, P>(filesystem: FS, mount_point: P) -> Result<Session>
 where
-    FS: Filesystem + Send + Sync + 'static,
+    FS: Filesystem + Send + Sync + Clone + 'static,
     P: AsRef<Path>,
 {
     Session::new(filesystem, mount_point).await

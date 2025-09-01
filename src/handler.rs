@@ -5,17 +5,17 @@ use crate::error::Result;
 use crate::pb::{request, response};
 use crate::{Error, Filesystem, ItemType, OpenMode, SetXattrPolicy};
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub(super) struct Handler<FS>
 where
-    FS: Filesystem + Send + Sync + 'static,
+    FS: Filesystem + Send + Sync + Clone + 'static,
 {
     filesystem: FS,
 }
 
 impl<FS> Handler<FS>
 where
-    FS: Filesystem + Send + Sync + 'static,
+    FS: Filesystem + Send + Sync + Clone + 'static,
 {
     pub(super) fn new(filesystem: FS) -> Self {
         Self { filesystem }
@@ -58,6 +58,15 @@ where
                     .await
                 {
                     Ok(item) => response::Content::Item(item),
+                    Err(Error::Posix(code)) => {
+                        response::Content::PosixError(response::PosixError { code })
+                    }
+                    Err(err) => return Err(err),
+                }
+            }
+            request::Content::ReclaimItem(msg) => {
+                match self.filesystem.reclaim_item(msg.item_id).await {
+                    Ok(_) => response::Content::Success(response::Success {}),
                     Err(Error::Posix(code)) => {
                         response::Content::PosixError(response::PosixError { code })
                     }

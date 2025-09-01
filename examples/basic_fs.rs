@@ -9,6 +9,7 @@ use fskit_rs::{
     PathConfOperations, Result, SetXattrPolicy, VolumeCapabilities, XattrOperations, Xattrs,
 };
 
+#[derive(Clone)]
 struct FsHandler;
 
 #[async_trait]
@@ -34,6 +35,10 @@ impl Filesystem for FsHandler {
     }
 
     async fn lookup_item(&mut self, _name: &OsStr, _directory_id: u64) -> Result<Item> {
+        Err(Error::Posix(libc::ENOSYS))
+    }
+
+    async fn reclaim_item(&mut self, _item_id: u64) -> Result<()> {
         Err(Error::Posix(libc::ENOSYS))
     }
 
