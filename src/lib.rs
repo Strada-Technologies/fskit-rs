@@ -45,6 +45,9 @@ pub trait Filesystem {
     /// Reclaims an item, releasing any resources allocated for the item.
     async fn reclaim_item(&mut self, item_id: u64) -> Result<()>;
 
+    /// Reads a symbolic link.
+    async fn read_symbolic_link(&mut self, item_id: u64) -> Result<Vec<u8>>;
+
     /// Creates a new file or directory item.
     async fn create_item(
         &mut self,
@@ -52,6 +55,15 @@ pub trait Filesystem {
         r#type: ItemType,
         directory_id: u64,
         attributes: ItemAttributes,
+    ) -> Result<Item>;
+
+    /// Creates a new symbolic link.
+    async fn create_symbolic_link(
+        &mut self,
+        name: &OsStr,
+        directory_id: u64,
+        new_attributes: ItemAttributes,
+        contents: Vec<u8>,
     ) -> Result<Item>;
 
     /// Removes an existing item from a given directory.

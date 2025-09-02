@@ -73,6 +73,15 @@ where
                     Err(err) => return Err(err),
                 }
             }
+            request::Content::ReadSymbolicLink(msg) => {
+                match self.filesystem.read_symbolic_link(msg.item_id).await {
+                    Ok(data) => response::Content::Data(data),
+                    Err(Error::Posix(code)) => {
+                        response::Content::PosixError(response::PosixError { code })
+                    }
+                    Err(err) => return Err(err),
+                }
+            }
             request::Content::CreateItem(msg) => {
                 match self
                     .filesystem
@@ -81,6 +90,24 @@ where
                         ItemType::try_from(msg.r#type).unwrap(),
                         msg.directory_id,
                         msg.attributes.unwrap(),
+                    )
+                    .await
+                {
+                    Ok(item) => response::Content::Item(item),
+                    Err(Error::Posix(code)) => {
+                        response::Content::PosixError(response::PosixError { code })
+                    }
+                    Err(err) => return Err(err),
+                }
+            }
+            request::Content::CreateSymbolicLink(msg) => {
+                match self
+                    .filesystem
+                    .create_symbolic_link(
+                        &OsString::from_vec(msg.name),
+                        msg.directory_id,
+                        msg.new_attributes.unwrap(),
+                        msg.contents,
                     )
                     .await
                 {

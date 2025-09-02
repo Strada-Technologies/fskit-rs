@@ -42,12 +42,26 @@ impl Filesystem for FsHandler {
         Err(Error::Posix(libc::ENOSYS))
     }
 
+    async fn read_symbolic_link(&mut self, _item_id: u64) -> Result<Vec<u8>> {
+        Err(Error::Posix(libc::ENOSYS))
+    }
+
     async fn create_item(
         &mut self,
         _name: &OsStr,
         _type: ItemType,
         _directory_id: u64,
         _attributes: ItemAttributes,
+    ) -> Result<Item> {
+        Err(Error::Posix(libc::ENOSYS))
+    }
+
+    async fn create_symbolic_link(
+        &mut self,
+        _name: &OsStr,
+        _directory_id: u64,
+        _new_attributes: ItemAttributes,
+        _contents: Vec<u8>,
     ) -> Result<Item> {
         Err(Error::Posix(libc::ENOSYS))
     }
