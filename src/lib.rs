@@ -4,10 +4,10 @@ use std::path::Path;
 use async_trait::async_trait;
 
 pub use crate::error::{Error, Result};
-pub use crate::pb::response::{DirectoryEntries, Item, Xattrs, directory_entries};
 pub use crate::pb::{
-    CaseFormat, ItemAttributes, ItemType, OpenMode, PathConfOperations, SetXattrPolicy,
-    VolumeCapabilities, XattrOperations,
+    CaseFormat, DirectoryEntries, Item, ItemAttributes, ItemType, OpenMode, PathConfOperations,
+    SetXattrPolicy, StatFsResult, TaskOptions, VolumeCapabilities, XattrOperations, Xattrs,
+    directory_entries,
 };
 use crate::session::Session;
 
@@ -28,6 +28,18 @@ pub trait Filesystem {
 
     /// A property that provides the supported capabilities of the volume.
     async fn get_volume_capabilities(&mut self) -> Result<VolumeCapabilities>;
+
+    /// A property that provides up-to-date statistics of the volume.
+    async fn get_volume_statistics(&mut self) -> Result<StatFsResult>;
+
+    /// Mounts this volume, using the specified options.
+    async fn mount(&mut self, options: TaskOptions) -> Result<()>;
+
+    /// Unmounts this volume.
+    async fn unmount(&mut self) -> Result<()>;
+
+    /// Synchronizes the volume with its underlying resource.
+    async fn synchronize(&mut self, flags: u32) -> Result<()>;
 
     /// Fetches attributes for the given item.
     async fn get_attributes(&mut self, item_id: u64) -> Result<ItemAttributes>;
@@ -87,6 +99,12 @@ pub trait Filesystem {
         cookie: u64,
         verifier: u64,
     ) -> Result<DirectoryEntries>;
+
+    /// Activates the volume using the specified options.
+    async fn activate(&mut self, options: TaskOptions) -> Result<Item>;
+
+    /// Tears down a previously initialized volume instance.
+    async fn deactivate(&mut self) -> Result<()>;
 
     /// Properties implemented by volumes that natively or partially support extended attributes.
     async fn get_xattr_operations(&mut self) -> Result<XattrOperations>;

@@ -6,7 +6,8 @@ use tokio::sync::oneshot;
 
 use fskit_rs::{
     DirectoryEntries, Error, Filesystem, Item, ItemAttributes, ItemType, OpenMode,
-    PathConfOperations, Result, SetXattrPolicy, VolumeCapabilities, XattrOperations, Xattrs,
+    PathConfOperations, Result, SetXattrPolicy, StatFsResult, TaskOptions, VolumeCapabilities,
+    XattrOperations, Xattrs,
 };
 
 #[derive(Clone)]
@@ -19,6 +20,22 @@ impl Filesystem for FsHandler {
     }
 
     async fn get_volume_capabilities(&mut self) -> Result<VolumeCapabilities> {
+        Err(Error::Posix(libc::ENOSYS))
+    }
+
+    async fn get_volume_statistics(&mut self) -> Result<StatFsResult> {
+        Err(Error::Posix(libc::ENOSYS))
+    }
+
+    async fn mount(&mut self, _options: TaskOptions) -> Result<()> {
+        Err(Error::Posix(libc::ENOSYS))
+    }
+
+    async fn unmount(&mut self) -> Result<()> {
+        Err(Error::Posix(libc::ENOSYS))
+    }
+
+    async fn synchronize(&mut self, _flags: u32) -> Result<()> {
         Err(Error::Posix(libc::ENOSYS))
     }
 
@@ -93,6 +110,14 @@ impl Filesystem for FsHandler {
         _cookie: u64,
         _verifier: u64,
     ) -> Result<DirectoryEntries> {
+        Err(Error::Posix(libc::ENOSYS))
+    }
+
+    async fn activate(&mut self, _options: TaskOptions) -> Result<Item> {
+        Err(Error::Posix(libc::ENOSYS))
+    }
+
+    async fn deactivate(&mut self) -> Result<()> {
         Err(Error::Posix(libc::ENOSYS))
     }
 
