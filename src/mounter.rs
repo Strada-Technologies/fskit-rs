@@ -2,7 +2,7 @@ use std::fs::File;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use crate::Error::{MountFailed, UnmountFailed};
+use crate::Error::{MountFailed, MountPoint, UnmountFailed};
 use crate::error::Result;
 use crate::path;
 
@@ -12,11 +12,15 @@ pub(super) struct Mounter {
 }
 
 impl Mounter {
-    pub(super) fn mount(path: PathBuf) -> Result<Self> {
-        let mount = Self { path: path.clone() };
+    pub(super) fn mount(fs_type: &str, path: PathBuf) -> Result<Self> {
+        // Check if the mount point exists
+        if !path.exists() {
+            return Err(MountPoint);
+        }
 
         // Create a blank disk image
-        let image = Path::new("/tmp/fskit.dmg");
+        let dmg_path = format!("/tmp/fskit-{fs_type}").to_lowercase();
+        let image = Path::new(&dmg_path);
         if !image.exists() {
             File::create(image)?;
         }
@@ -31,52 +35,36 @@ impl Mounter {
             .output()?;
         let device = std::str::from_utf8(&output.stdout).unwrap().trim();
 
-        // Check if already mounted
-        let output = Command::new("mount").output()?;
-        let out = std::str::from_utf8(&output.stdout).unwrap();
-        // TODO: another path for device
-        if out.contains(path!(path)) || out.contains(device) {
-            mount.unmount()?;
-        }
-
-        // Check if the mount point exists
-        if !path.exists() {
-            std::fs::create_dir(&path)?;
-        }
-
         // Mount a filesystem
-        let args = format!("-F -t BridgeFS {} {}", device, path!(path));
+        let args = format!("-F -t {fs_type} {device} {}", path!(path));
         if !Command::new("mount")
             .args(args.split_whitespace())
             .status()?
             .success()
         {
-            Err(MountFailed)?
+            return Err(MountFailed);
         }
 
         println!(
-            "Filesystem mounted - type: BridgeFS, mount point: {} ({})",
-            path!(path),
-            device
+            "Filesystem mounted - type: {fs_type}, mount point: {} ({device})",
+            path!(path)
         );
 
-        Ok(mount)
+        Ok(Self { path })
     }
 
     pub(super) fn unmount(&self) -> Result<()> {
         // Unmount a filesystem
         if !Command::new("umount")
+            .arg("-f")
             .arg(self.path.clone())
             .status()?
             .success()
         {
-            Err(UnmountFailed)?
+            return Err(UnmountFailed);
         }
 
-        println!(
-            "Filesystem unmounted - type: BridgeFS, mount point: {}",
-            path!(self.path)
-        );
+        println!("Filesystem unmounted - mount point: {}", path!(self.path));
 
         Ok(())
     }

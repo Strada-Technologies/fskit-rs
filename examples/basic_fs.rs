@@ -1,8 +1,9 @@
 use std::ffi::OsStr;
+use std::fs;
 use std::path::Path;
 
 use async_trait::async_trait;
-use tokio::sync::oneshot;
+use tokio::signal;
 
 use fskit_rs::{
     DirectoryEntries, Error, Filesystem, Item, ItemAttributes, ItemType, OpenMode,
@@ -161,27 +162,25 @@ impl Filesystem for FsHandler {
 }
 
 #[tokio::main]
-async fn main() {
-    let (_stop_tx, stop_rx) = oneshot::channel::<()>();
-    tokio::task::spawn_blocking(move || {
-        futures::executor::block_on(async {
-            let handler = FsHandler;
+async fn main() -> Result<()> {
+    let handler = FsHandler;
 
-            let mount_point = Path::new("/tmp/fskit-rs-mount_point");
+    let mount_point = Path::new("/tmp/fskit-mount-point");
+    if !mount_point.exists() {
+        fs::create_dir(mount_point)?;
+    }
 
-            let session = match fskit_rs::mount(handler, mount_point).await {
-                Ok(session) => session,
-                Err(err) => {
-                    eprintln!("{}", err);
-                    return;
-                }
-            };
+    let session = match fskit_rs::mount(handler, "BridgeFS", mount_point).await {
+        Ok(session) => session,
+        Err(err) => {
+            eprintln!("{err}");
+            return Err(err);
+        }
+    };
 
-            let _ = stop_rx.await;
+    signal::ctrl_c().await?;
 
-            drop(session);
-        });
-    })
-    .await
-    .unwrap();
+    drop(session);
+
+    Ok(())
 }

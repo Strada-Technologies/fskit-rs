@@ -137,16 +137,32 @@ pub trait Filesystem {
     async fn write(&mut self, contents: Vec<u8>, item_id: u64, offset: i64) -> Result<i64>;
 }
 
-/// Mount the given filesystem to the given mountpoint. This function spawns
-/// a background thread to handle filesystem operations while being mounted.
-/// The returned handle should be stored to reference the mounted filesystem.
-/// If it's dropped, the filesystem will be unmounted.
-pub async fn mount<FS, P>(filesystem: FS, mount_point: P) -> Result<Session>
+/// Mounts a user-space filesystem at `mount_point` and returns a `Session` that
+/// keeps the mount alive. Non-blocking: background workers serve kernel requests;
+/// dropping `Session` cleanly unmounts.
+///
+/// # Parameters
+/// * `filesystem` — Your `Filesystem` impl. Must be `Send + Sync + Clone + 'static`.
+///   Prefer keeping heavy state in `Arc<_>`.
+/// * `fs_type` — Backend type selector. On macOS FSKit this must equal the
+///   `FSFileSystemType` in the appex Info.plist (e.g., `"BridgeFS"`).
+/// * `mount_point` — Existing (usually empty) directory to mount onto. Use
+///   `/Volumes/<Name>` (mkdir may require `sudo`) or a user-owned path like `~/<Name>`.
+///
+/// # Returns
+/// A `Session` handle; keeping it alive keeps the mount active. Dropping it unmounts.
+///
+/// # macOS (FSKit) notes
+/// * The extension must be **enabled** in System Settings (File System Extensions)
+///   or via the in-app Extension Browser.
+/// * FSKit mounts use `noowners`; you can store/report uid/gid in metadata,
+///   but host POSIX enforcement still be disabled.
+pub async fn mount<FS, P>(filesystem: FS, fs_type: &str, mount_point: P) -> Result<Session>
 where
     FS: Filesystem + Send + Sync + Clone + 'static,
     P: AsRef<Path>,
 {
-    Session::new(filesystem, mount_point).await
+    Session::new(filesystem, fs_type, mount_point).await
 }
 
 #[macro_export]

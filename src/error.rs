@@ -8,10 +8,13 @@ pub enum Error {
     #[error("Socket starting error")]
     SocketFailed,
 
-    #[error("Mount failed: Unable to complete the request")]
+    #[error("Mount failed: mount point does not exist")]
+    MountPoint,
+
+    #[error("Mount failed: unable to complete the request")]
     MountFailed,
 
-    #[error("Unmount failed: Unable to complete the request")]
+    #[error("Unmount failed: unable to complete the request")]
     UnmountFailed,
 
     #[error("POSIX error: {0}")]

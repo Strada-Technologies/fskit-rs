@@ -10,11 +10,11 @@ use crate::socket::Socket;
 #[derive(Debug)]
 pub struct Session {
     socket: Socket,
-    mounter: Option<Mounter>,
+    mounter: Mounter,
 }
 
 impl Session {
-    pub(super) async fn new<FS, P>(filesystem: FS, mount_point: P) -> Result<Self>
+    pub(super) async fn new<FS, P>(filesystem: FS, fs_type: &str, mount_point: P) -> Result<Self>
     where
         FS: Filesystem + Send + Sync + Clone + 'static,
         P: AsRef<Path>,
@@ -23,7 +23,7 @@ impl Session {
 
         let socket = Socket::start(handler).await?;
 
-        let mounter = match Mounter::mount(mount_point.as_ref().to_path_buf()) {
+        let mounter = match Mounter::mount(fs_type, mount_point.as_ref().to_path_buf()) {
             Ok(mount) => mount,
             Err(err) => {
                 socket.stop().await;
@@ -31,22 +31,16 @@ impl Session {
             }
         };
 
-        Ok(Self {
-            socket,
-            mounter: Some(mounter),
-        })
+        Ok(Self { socket, mounter })
     }
 }
 
 impl Drop for Session {
     fn drop(&mut self) {
-        if let Some(mounter) = self.mounter.take() {
-            mounter.unmount().unwrap();
-        }
+        let _ = self.mounter.unmount().inspect_err(|err| eprintln!("{err}"));
 
-        let socket = self.socket.clone();
-        tokio::spawn(async move {
-            socket.stop().await;
+        futures::executor::block_on(async {
+            self.socket.stop().await;
         });
     }
 }

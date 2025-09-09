@@ -15,9 +15,9 @@ use crate::error::Result;
 use crate::handler::Handler;
 use crate::pb::{Request, Response};
 
-const LOCALHOST_PORT: i32 = 35367;
+const LOCAL_PORT: i32 = 35367;
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub(super) struct Socket {
     stop_tx: Sender<()>,
 }
@@ -56,7 +56,7 @@ async fn spawn_loop<FS>(
 where
     FS: Filesystem + Send + Sync + Clone + 'static,
 {
-    let addr = format!("{}:{LOCALHOST_PORT}", Ipv4Addr::LOCALHOST);
+    let addr = format!("{}:{LOCAL_PORT}", Ipv4Addr::LOCALHOST);
 
     let listener = TcpListener::bind(&addr).await?;
     println!("Listening on {addr}");
