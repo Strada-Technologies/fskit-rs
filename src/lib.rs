@@ -150,10 +150,12 @@ pub enum Error {
 /// # Parameters
 /// * `filesystem` — Your `Filesystem` impl. Must be `Send + Sync + Clone + 'static`.
 ///   Prefer keeping heavy state in `Arc<_>`.
-/// * `fs_type` — Backend type selector. On macOS FSKit this must equal the
-///   `FSFileSystemType` in the appex Info.plist (e.g., `"BridgeFS"`).
-/// * `mount_point` — Existing (usually empty) directory to mount onto. Use
-///   `/Volumes/<Name>` (mkdir may require `sudo`) or a user-owned path like `~/<Name>`.
+/// * `fs_type` — Backend type selector. On macOS FSKit this must equal the `FSFileSystemType`
+///   in the appex Info.plist (e.g., `"BridgeFS"`).
+/// * `mount_point` — Existing (usually empty) directory to mount onto. Use `/Volumes/<Name>`
+///   (mkdir may require `sudo`) or a user-owned path.
+/// * `force` — If `true`, preflight will **unmount any existing filesystem at `mount_point`**
+///   before mounting.
 ///
 /// # Returns
 /// A `Session` handle; keeping it alive keeps the mount active. Dropping it unmounts.
@@ -163,12 +165,17 @@ pub enum Error {
 ///   or via the in-app Extension Browser.
 /// * FSKit mounts use `noowners`; you can store/report uid/gid in metadata,
 ///   but host POSIX enforcement still be disabled.
-pub async fn mount<FS, P>(filesystem: FS, fs_type: &str, mount_point: P) -> session::Result<Session>
+pub async fn mount<FS, P>(
+    filesystem: FS,
+    fs_type: &str,
+    mount_point: P,
+    force: bool,
+) -> session::Result<Session>
 where
     FS: Filesystem + Send + Sync + Clone + 'static,
     P: AsRef<Path>,
 {
-    Session::new(filesystem, fs_type, mount_point).await
+    Session::new(filesystem, fs_type, mount_point, force).await
 }
 
 #[macro_export]

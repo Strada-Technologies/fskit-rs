@@ -141,6 +141,6 @@ pub enum Error {
     #[error(transparent)]
     Io(#[from] std::io::Error),
 
-    #[error("Socket starting error")]
+    #[error("socket failed to start")]
     StartFailed,
 }

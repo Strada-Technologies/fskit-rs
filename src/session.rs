@@ -14,7 +14,12 @@ pub struct Session {
 }
 
 impl Session {
-    pub(super) async fn new<FS, P>(filesystem: FS, fs_type: &str, mount_point: P) -> Result<Self>
+    pub(super) async fn new<FS, P>(
+        filesystem: FS,
+        fs_type: &str,
+        mount_point: P,
+        force: bool,
+    ) -> Result<Self>
     where
         FS: Filesystem + Send + Sync + Clone + 'static,
         P: AsRef<Path>,
@@ -23,7 +28,7 @@ impl Session {
 
         let socket = Socket::start(handler).await?;
 
-        let mounter = match Mounter::mount(fs_type, mount_point.as_ref().to_path_buf()) {
+        let mounter = match Mounter::mount(fs_type, mount_point.as_ref().to_path_buf(), force) {
             Ok(mount) => mount,
             Err(err) => {
                 socket.stop().await;

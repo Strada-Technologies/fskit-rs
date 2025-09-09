@@ -12,10 +12,15 @@ pub(super) struct Mounter {
 }
 
 impl Mounter {
-    pub(super) fn mount(fs_type: &str, path: PathBuf) -> Result<Self> {
+    pub(super) fn mount(fs_type: &str, path: PathBuf, force: bool) -> Result<Self> {
+        // Force unmount a filesystem
+        if force {
+            let _ = unmount(&path);
+        }
+
         // Check if the mount point exists
         if !path.exists() {
-            return Err(Error::MountPoint);
+            return Err(Error::MountPointMissing);
         }
 
         // Create a blank disk image
@@ -37,12 +42,15 @@ impl Mounter {
 
         // Mount a filesystem
         let args = format!("-F -t {fs_type} {device} {}", path!(path));
-        if !Command::new("mount")
+        let status = Command::new("mount")
             .args(args.split_whitespace())
-            .status()?
-            .success()
-        {
-            return Err(Error::MountFailed);
+            .status()?;
+        if !status.success() {
+            return if status.code().unwrap_or(1) == 69 {
+                Err(Error::MountPointBusy)
+            } else {
+                Err(Error::MountFailed)
+            };
         }
 
         println!(
@@ -54,19 +62,22 @@ impl Mounter {
     }
 
     pub(super) fn unmount(&self) -> Result<()> {
-        // Unmount a filesystem
-        if !Command::new("umount")
-            .arg("-f")
-            .arg(self.path.clone())
-            .status()?
-            .success()
-        {
-            return Err(Error::UnmountFailed);
-        }
-
+        unmount(&self.path)?;
         println!("Filesystem unmounted - mount point: {}", path!(self.path));
-
         Ok(())
+    }
+}
+
+fn unmount(path: &PathBuf) -> Result<()> {
+    if Command::new("umount")
+        .arg("-f")
+        .arg(path)
+        .status()?
+        .success()
+    {
+        Ok(())
+    } else {
+        Err(Error::UnmountFailed)
     }
 }
 
@@ -75,12 +86,15 @@ pub enum Error {
     #[error(transparent)]
     Io(#[from] std::io::Error),
 
-    #[error("Mount failed: mount point does not exist")]
-    MountPoint,
+    #[error("mount point does not exist")]
+    MountPointMissing,
 
-    #[error("Mount failed: unable to complete the request")]
+    #[error("mount point is already in use")]
+    MountPointBusy,
+
+    #[error("unable to complete the mount request")]
     MountFailed,
 
-    #[error("Unmount failed: unable to complete the request")]
+    #[error("unable to complete the unmount request")]
     UnmountFailed,
 }

@@ -170,7 +170,7 @@ async fn main() -> session::Result<()> {
         fs::create_dir(mount_point)?;
     }
 
-    let session = match fskit_rs::mount(handler, "BridgeFS", mount_point).await {
+    let session = match fskit_rs::mount(handler, "BridgeFS", mount_point, true).await {
         Ok(session) => session,
         Err(err) => {
             eprintln!("{err}");
