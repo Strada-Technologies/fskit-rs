@@ -1,4 +1,3 @@
-use std::io;
 use std::net::Ipv4Addr;
 
 use bytes::{Buf, BytesMut};
@@ -9,11 +8,11 @@ use tokio::select;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::{Receiver, Sender};
 
-use crate::Error::SocketFailed;
 use crate::Filesystem;
-use crate::error::Result;
 use crate::handler::Handler;
 use crate::pb::{Request, Response};
+
+pub type Result<T> = std::result::Result<T, Error>;
 
 const LOCAL_PORT: i32 = 35367;
 
@@ -37,7 +36,7 @@ impl Socket {
         });
 
         if !start_rx.recv().await.unwrap() {
-            return Err(SocketFailed);
+            return Err(Error::StartFailed);
         }
 
         Ok(Self { stop_tx })
@@ -113,7 +112,7 @@ where
                                 response.encode_length_delimited(&mut out).unwrap();
 
                                 if let Err(err) = stream.write_all(&out).await {
-                                    eprintln!("Write error: {err:?}");
+                                    eprintln!("Write error: {err}");
                                 }
                             }
                             Err(err) => {
@@ -121,18 +120,27 @@ where
                                 if !s.contains("failed to decode length prefix")
                                     && !s.contains("buffer underflow")
                                 {
-                                    eprintln!("Decode error: {err:?}");
+                                    eprintln!("Decode error: {err}");
                                 }
                                 break;
                             }
                         }
                     }
                 }
-                Err(err) if err.kind() == io::ErrorKind::WouldBlock => {
+                Err(err) if err.kind() == std::io::ErrorKind::WouldBlock => {
                     continue;
                 }
-                Err(err) => eprintln!("Read error: {err:?}"),
+                Err(err) => eprintln!("Read error: {err}"),
             }
         }
     }
+}
+
+#[derive(thiserror::Error, Debug)]
+pub enum Error {
+    #[error(transparent)]
+    Io(#[from] std::io::Error),
+
+    #[error("Socket starting error")]
+    StartFailed,
 }

@@ -2,9 +2,9 @@ use std::fs::File;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use crate::Error::{MountFailed, MountPoint, UnmountFailed};
-use crate::error::Result;
 use crate::path;
+
+pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Debug)]
 pub(super) struct Mounter {
@@ -15,7 +15,7 @@ impl Mounter {
     pub(super) fn mount(fs_type: &str, path: PathBuf) -> Result<Self> {
         // Check if the mount point exists
         if !path.exists() {
-            return Err(MountPoint);
+            return Err(Error::MountPoint);
         }
 
         // Create a blank disk image
@@ -42,7 +42,7 @@ impl Mounter {
             .status()?
             .success()
         {
-            return Err(MountFailed);
+            return Err(Error::MountFailed);
         }
 
         println!(
@@ -61,11 +61,26 @@ impl Mounter {
             .status()?
             .success()
         {
-            return Err(UnmountFailed);
+            return Err(Error::UnmountFailed);
         }
 
         println!("Filesystem unmounted - mount point: {}", path!(self.path));
 
         Ok(())
     }
+}
+
+#[derive(thiserror::Error, Debug)]
+pub enum Error {
+    #[error(transparent)]
+    Io(#[from] std::io::Error),
+
+    #[error("Mount failed: mount point does not exist")]
+    MountPoint,
+
+    #[error("Mount failed: unable to complete the request")]
+    MountFailed,
+
+    #[error("Unmount failed: unable to complete the request")]
+    UnmountFailed,
 }

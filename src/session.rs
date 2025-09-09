@@ -1,12 +1,12 @@
 use std::path::Path;
 
-use crate::Filesystem;
-use crate::error::Result;
 use crate::handler::Handler;
 use crate::mounter::Mounter;
 use crate::socket::Socket;
+use crate::{Filesystem, mounter, socket};
 
-/// The session data structure
+pub type Result<T> = std::result::Result<T, Error>;
+
 #[derive(Debug)]
 pub struct Session {
     socket: Socket,
@@ -27,7 +27,7 @@ impl Session {
             Ok(mount) => mount,
             Err(err) => {
                 socket.stop().await;
-                return Err(err);
+                return Err(Error::Mounter(err));
             }
         };
 
@@ -43,4 +43,16 @@ impl Drop for Session {
             self.socket.stop().await;
         });
     }
+}
+
+#[derive(thiserror::Error, Debug)]
+pub enum Error {
+    #[error(transparent)]
+    Io(#[from] std::io::Error),
+
+    #[error(transparent)]
+    Socket(#[from] socket::Error),
+
+    #[error(transparent)]
+    Mounter(#[from] mounter::Error),
 }

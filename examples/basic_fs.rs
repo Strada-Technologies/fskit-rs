@@ -8,7 +8,7 @@ use tokio::signal;
 use fskit_rs::{
     DirectoryEntries, Error, Filesystem, Item, ItemAttributes, ItemType, OpenMode,
     PathConfOperations, Result, SetXattrPolicy, StatFsResult, TaskOptions, VolumeCapabilities,
-    XattrOperations, Xattrs,
+    XattrOperations, Xattrs, session,
 };
 
 #[derive(Clone)]
@@ -162,7 +162,7 @@ impl Filesystem for FsHandler {
 }
 
 #[tokio::main]
-async fn main() -> Result<()> {
+async fn main() -> session::Result<()> {
     let handler = FsHandler;
 
     let mount_point = Path::new("/tmp/fskit-mount-point");

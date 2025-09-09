@@ -3,7 +3,6 @@ use std::path::Path;
 
 use async_trait::async_trait;
 
-pub use crate::error::{Error, Result};
 pub use crate::pb::{
     CaseFormat, DirectoryEntries, Item, ItemAttributes, ItemType, OpenMode, PathConfOperations,
     SetXattrPolicy, StatFsResult, TaskOptions, VolumeCapabilities, XattrOperations, Xattrs,
@@ -11,15 +10,16 @@ pub use crate::pb::{
 };
 use crate::session::Session;
 
-mod error;
 mod handler;
-mod mounter;
-mod session;
-mod socket;
+pub mod mounter;
+pub mod session;
+pub mod socket;
 
 mod pb {
     include!(concat!(env!("OUT_DIR"), "/pb.rs"));
 }
+
+pub type Result<T> = std::result::Result<T, Error>;
 
 #[async_trait]
 pub trait Filesystem {
@@ -137,6 +137,12 @@ pub trait Filesystem {
     async fn write(&mut self, contents: Vec<u8>, item_id: u64, offset: i64) -> Result<i64>;
 }
 
+#[derive(thiserror::Error, Debug)]
+pub enum Error {
+    #[error("POSIX error: {0}")]
+    Posix(std::ffi::c_int),
+}
+
 /// Mounts a user-space filesystem at `mount_point` and returns a `Session` that
 /// keeps the mount alive. Non-blocking: background workers serve kernel requests;
 /// dropping `Session` cleanly unmounts.
@@ -157,7 +163,7 @@ pub trait Filesystem {
 ///   or via the in-app Extension Browser.
 /// * FSKit mounts use `noowners`; you can store/report uid/gid in metadata,
 ///   but host POSIX enforcement still be disabled.
-pub async fn mount<FS, P>(filesystem: FS, fs_type: &str, mount_point: P) -> Result<Session>
+pub async fn mount<FS, P>(filesystem: FS, fs_type: &str, mount_point: P) -> session::Result<Session>
 where
     FS: Filesystem + Send + Sync + Clone + 'static,
     P: AsRef<Path>,

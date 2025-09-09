@@ -1,8 +1,8 @@
 use std::ffi::OsString;
 use std::os::unix::ffi::OsStringExt;
 
-use crate::error::Result;
-use crate::pb::{PosixError, Success, request, response};
+use crate::Result;
+use crate::pb::{Success, request, response};
 use crate::{Error, Filesystem, ItemType, OpenMode, SetXattrPolicy};
 
 #[derive(Clone, Debug)]
@@ -26,48 +26,41 @@ where
             request::Content::GetPathConfOperations(_) => {
                 match self.filesystem.get_path_conf_operations().await {
                     Ok(res) => response::Content::PathConfOperations(res),
-                    Err(Error::Posix(code)) => response::Content::PosixError(PosixError { code }),
-                    Err(err) => return Err(err),
+                    Err(Error::Posix(code)) => response::Content::PosixError(code),
                 }
             }
             request::Content::GetVolumeCapabilities(_) => {
                 match self.filesystem.get_volume_capabilities().await {
                     Ok(res) => response::Content::VolumeCapabilities(res),
-                    Err(Error::Posix(code)) => response::Content::PosixError(PosixError { code }),
-                    Err(err) => return Err(err),
+                    Err(Error::Posix(code)) => response::Content::PosixError(code),
                 }
             }
             request::Content::GetVolumeStatistics(_) => {
                 match self.filesystem.get_volume_statistics().await {
                     Ok(res) => response::Content::StatFsResult(res),
-                    Err(Error::Posix(code)) => response::Content::PosixError(PosixError { code }),
-                    Err(err) => return Err(err),
+                    Err(Error::Posix(code)) => response::Content::PosixError(code),
                 }
             }
             request::Content::Mount(msg) => {
                 match self.filesystem.mount(msg.options.unwrap()).await {
                     Ok(_) => response::Content::Success(Success {}),
-                    Err(Error::Posix(code)) => response::Content::PosixError(PosixError { code }),
-                    Err(err) => return Err(err),
+                    Err(Error::Posix(code)) => response::Content::PosixError(code),
                 }
             }
             request::Content::Unmount(_) => match self.filesystem.unmount().await {
                 Ok(_) => response::Content::Success(Success {}),
-                Err(Error::Posix(code)) => response::Content::PosixError(PosixError { code }),
-                Err(err) => return Err(err),
+                Err(Error::Posix(code)) => response::Content::PosixError(code),
             },
             request::Content::Synchronize(msg) => {
                 match self.filesystem.synchronize(msg.flags).await {
                     Ok(_) => response::Content::Success(Success {}),
-                    Err(Error::Posix(code)) => response::Content::PosixError(PosixError { code }),
-                    Err(err) => return Err(err),
+                    Err(Error::Posix(code)) => response::Content::PosixError(code),
                 }
             }
             request::Content::GetAttributes(msg) => {
                 match self.filesystem.get_attributes(msg.item_id).await {
                     Ok(attrs) => response::Content::ItemAttributes(attrs),
-                    Err(Error::Posix(code)) => response::Content::PosixError(PosixError { code }),
-                    Err(err) => return Err(err),
+                    Err(Error::Posix(code)) => response::Content::PosixError(code),
                 }
             }
             request::Content::SetAttributes(msg) => {
@@ -77,8 +70,7 @@ where
                     .await
                 {
                     Ok(attrs) => response::Content::ItemAttributes(attrs),
-                    Err(Error::Posix(code)) => response::Content::PosixError(PosixError { code }),
-                    Err(err) => return Err(err),
+                    Err(Error::Posix(code)) => response::Content::PosixError(code),
                 }
             }
             request::Content::LookupItem(msg) => {
@@ -88,22 +80,19 @@ where
                     .await
                 {
                     Ok(item) => response::Content::Item(item),
-                    Err(Error::Posix(code)) => response::Content::PosixError(PosixError { code }),
-                    Err(err) => return Err(err),
+                    Err(Error::Posix(code)) => response::Content::PosixError(code),
                 }
             }
             request::Content::ReclaimItem(msg) => {
                 match self.filesystem.reclaim_item(msg.item_id).await {
                     Ok(_) => response::Content::Success(Success {}),
-                    Err(Error::Posix(code)) => response::Content::PosixError(PosixError { code }),
-                    Err(err) => return Err(err),
+                    Err(Error::Posix(code)) => response::Content::PosixError(code),
                 }
             }
             request::Content::ReadSymbolicLink(msg) => {
                 match self.filesystem.read_symbolic_link(msg.item_id).await {
                     Ok(data) => response::Content::Data(data),
-                    Err(Error::Posix(code)) => response::Content::PosixError(PosixError { code }),
-                    Err(err) => return Err(err),
+                    Err(Error::Posix(code)) => response::Content::PosixError(code),
                 }
             }
             request::Content::CreateItem(msg) => {
@@ -118,8 +107,7 @@ where
                     .await
                 {
                     Ok(item) => response::Content::Item(item),
-                    Err(Error::Posix(code)) => response::Content::PosixError(PosixError { code }),
-                    Err(err) => return Err(err),
+                    Err(Error::Posix(code)) => response::Content::PosixError(code),
                 }
             }
             request::Content::CreateSymbolicLink(msg) => {
@@ -134,8 +122,7 @@ where
                     .await
                 {
                     Ok(item) => response::Content::Item(item),
-                    Err(Error::Posix(code)) => response::Content::PosixError(PosixError { code }),
-                    Err(err) => return Err(err),
+                    Err(Error::Posix(code)) => response::Content::PosixError(code),
                 }
             }
             request::Content::RemoveItem(msg) => match self
@@ -144,8 +131,7 @@ where
                 .await
             {
                 Ok(_) => response::Content::Success(Success {}),
-                Err(Error::Posix(code)) => response::Content::PosixError(PosixError { code }),
-                Err(err) => return Err(err),
+                Err(Error::Posix(code)) => response::Content::PosixError(code),
             },
             request::Content::RenameItem(msg) => match self
                 .filesystem
@@ -160,8 +146,7 @@ where
                 .await
             {
                 Ok(data) => response::Content::Data(data),
-                Err(Error::Posix(code)) => response::Content::PosixError(PosixError { code }),
-                Err(err) => return Err(err),
+                Err(Error::Posix(code)) => response::Content::PosixError(code),
             },
             request::Content::EnumerateDirectory(msg) => {
                 match self
@@ -170,21 +155,18 @@ where
                     .await
                 {
                     Ok(entries) => response::Content::DirectoryEntries(entries),
-                    Err(Error::Posix(code)) => response::Content::PosixError(PosixError { code }),
-                    Err(err) => return Err(err),
+                    Err(Error::Posix(code)) => response::Content::PosixError(code),
                 }
             }
             request::Content::Activate(msg) => {
                 match self.filesystem.activate(msg.options.unwrap()).await {
                     Ok(item) => response::Content::Item(item),
-                    Err(Error::Posix(code)) => response::Content::PosixError(PosixError { code }),
-                    Err(err) => return Err(err),
+                    Err(Error::Posix(code)) => response::Content::PosixError(code),
                 }
             }
             request::Content::Deactivate(_) => match self.filesystem.deactivate().await {
                 Ok(_) => response::Content::Success(Success {}),
-                Err(Error::Posix(code)) => response::Content::PosixError(PosixError { code }),
-                Err(err) => return Err(err),
+                Err(Error::Posix(code)) => response::Content::PosixError(code),
             },
             request::Content::GetXattrOperations(_) => {
                 response::Content::XattrOperations(self.filesystem.get_xattr_operations().await?)
@@ -195,8 +177,7 @@ where
                 .await
             {
                 Ok(data) => response::Content::Data(data),
-                Err(Error::Posix(code)) => response::Content::PosixError(PosixError { code }),
-                Err(err) => return Err(err),
+                Err(Error::Posix(code)) => response::Content::PosixError(code),
             },
             request::Content::SetXattr(msg) => match self
                 .filesystem
@@ -209,14 +190,12 @@ where
                 .await
             {
                 Ok(_) => response::Content::Success(Success {}),
-                Err(Error::Posix(code)) => response::Content::PosixError(PosixError { code }),
-                Err(err) => return Err(err),
+                Err(Error::Posix(code)) => response::Content::PosixError(code),
             },
             request::Content::GetXattrs(msg) => {
                 match self.filesystem.get_xattrs(msg.item_id).await {
                     Ok(xattrs) => response::Content::Xattrs(xattrs),
-                    Err(Error::Posix(code)) => response::Content::PosixError(PosixError { code }),
-                    Err(err) => return Err(err),
+                    Err(Error::Posix(code)) => response::Content::PosixError(code),
                 }
             }
             request::Content::OpenItem(msg) => {
@@ -226,8 +205,7 @@ where
                     .await
                 {
                     Ok(_) => response::Content::Success(Success {}),
-                    Err(Error::Posix(code)) => response::Content::PosixError(PosixError { code }),
-                    Err(err) => return Err(err),
+                    Err(Error::Posix(code)) => response::Content::PosixError(code),
                 }
             }
             request::Content::CloseItem(msg) => {
@@ -237,8 +215,7 @@ where
                     .await
                 {
                     Ok(_) => response::Content::Success(Success {}),
-                    Err(Error::Posix(code)) => response::Content::PosixError(PosixError { code }),
-                    Err(err) => return Err(err),
+                    Err(Error::Posix(code)) => response::Content::PosixError(code),
                 }
             }
             request::Content::Read(msg) => match self
@@ -247,8 +224,7 @@ where
                 .await
             {
                 Ok(data) => response::Content::Data(data),
-                Err(Error::Posix(code)) => response::Content::PosixError(PosixError { code }),
-                Err(err) => return Err(err),
+                Err(Error::Posix(code)) => response::Content::PosixError(code),
             },
             request::Content::Write(msg) => match self
                 .filesystem
@@ -256,8 +232,7 @@ where
                 .await
             {
                 Ok(count) => response::Content::ByteCount(count),
-                Err(Error::Posix(code)) => response::Content::PosixError(PosixError { code }),
-                Err(err) => return Err(err),
+                Err(Error::Posix(code)) => response::Content::PosixError(code),
             },
         })
     }
