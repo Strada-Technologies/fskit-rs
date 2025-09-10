@@ -5,8 +5,8 @@ use async_trait::async_trait;
 
 pub use crate::pb::{
     CaseFormat, DirectoryEntries, Item, ItemAttributes, ItemType, OpenMode, PathConfOperations,
-    SetXattrPolicy, StatFsResult, TaskOptions, VolumeCapabilities, XattrOperations, Xattrs,
-    directory_entries,
+    ProbeResult, SetXattrPolicy, StatFsResult, TaskOptions, VolumeCapabilities, VolumeIdentifier,
+    XattrOperations, Xattrs, directory_entries,
 };
 use crate::session::Session;
 
@@ -23,6 +23,12 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 #[async_trait]
 pub trait Filesystem {
+    /// Requests that the file system probe the specified resource.
+    async fn probe_resource(&mut self) -> Result<ProbeResult>;
+
+    /// Get the volume identifier and name.
+    async fn get_volume_identifier(&mut self) -> Result<VolumeIdentifier>;
+
     /// Properties implemented by volumes that support providing the values of system limits or options.
     async fn get_path_conf_operations(&mut self) -> Result<PathConfOperations>;
 

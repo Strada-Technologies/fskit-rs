@@ -7,8 +7,8 @@ use tokio::signal;
 
 use fskit_rs::{
     DirectoryEntries, Error, Filesystem, Item, ItemAttributes, ItemType, OpenMode,
-    PathConfOperations, Result, SetXattrPolicy, StatFsResult, TaskOptions, VolumeCapabilities,
-    XattrOperations, Xattrs, session,
+    PathConfOperations, ProbeResult, Result, SetXattrPolicy, StatFsResult, TaskOptions,
+    VolumeCapabilities, VolumeIdentifier, XattrOperations, Xattrs, session,
 };
 
 #[derive(Clone)]
@@ -16,6 +16,14 @@ struct FsHandler;
 
 #[async_trait]
 impl Filesystem for FsHandler {
+    async fn probe_resource(&mut self) -> Result<ProbeResult> {
+        Err(Error::Posix(libc::ENOSYS))
+    }
+
+    async fn get_volume_identifier(&mut self) -> Result<VolumeIdentifier> {
+        Err(Error::Posix(libc::ENOSYS))
+    }
+
     async fn get_path_conf_operations(&mut self) -> Result<PathConfOperations> {
         Err(Error::Posix(libc::ENOSYS))
     }
@@ -167,7 +175,7 @@ async fn main() -> session::Result<()> {
 
     let mount_point = Path::new("/tmp/fskit-mount-point");
     if !mount_point.exists() {
-        fs::create_dir(mount_point)?;
+        let _ = fs::create_dir(mount_point);
     }
 
     let session = match fskit_rs::mount(handler, "BridgeFS", mount_point, true).await {
