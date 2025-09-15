@@ -2,7 +2,7 @@ use std::fs::File;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use crate::path;
+use crate::{MountOptions, path};
 
 pub type Result<T> = std::result::Result<T, Error>;
 
@@ -12,19 +12,19 @@ pub(super) struct Mounter {
 }
 
 impl Mounter {
-    pub(super) fn mount(fs_type: &str, path: PathBuf, force: bool) -> Result<Self> {
+    pub(super) fn mount(opts: MountOptions) -> Result<Self> {
         // Force unmount a filesystem
-        if force {
-            let _ = unmount(&path);
+        if opts.force {
+            let _ = unmount(&opts.mount_point);
         }
 
         // Check if the mount point exists
-        if !path.exists() {
+        if !opts.mount_point.exists() {
             return Err(Error::MountPointMissing);
         }
 
         // Create a blank disk image
-        let dmg_path = format!("/tmp/fskit-{fs_type}").to_lowercase();
+        let dmg_path = format!("/tmp/fskit-{}", opts.fs_type);
         let image = Path::new(&dmg_path);
         if !image.exists() {
             File::create(image)?;
@@ -41,7 +41,12 @@ impl Mounter {
         let device = std::str::from_utf8(&output.stdout).unwrap().trim();
 
         // Mount a filesystem
-        let args = format!("-F -t {fs_type} {device} {}", path!(path));
+        let args = format!(
+            "-F -t {} -o port={} {device} {}",
+            opts.socket_port,
+            opts.fs_type,
+            path!(opts.mount_point)
+        );
         let status = Command::new("mount")
             .args(args.split_whitespace())
             .status()?;
@@ -54,11 +59,14 @@ impl Mounter {
         }
 
         println!(
-            "Filesystem mounted - type: {fs_type}, mount point: {} ({device})",
-            path!(path)
+            "Filesystem mounted - type: {}, mount point: {} ({device})",
+            opts.fs_type,
+            path!(opts.mount_point)
         );
 
-        Ok(Self { path })
+        Ok(Self {
+            path: opts.mount_point,
+        })
     }
 
     pub(super) fn unmount(&self) -> Result<()> {

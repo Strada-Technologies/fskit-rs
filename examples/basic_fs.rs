@@ -1,12 +1,11 @@
 use std::ffi::OsStr;
 use std::fs;
-use std::path::Path;
 
 use async_trait::async_trait;
 use tokio::signal;
 
 use fskit_rs::{
-    DirectoryEntries, Error, Filesystem, Item, ItemAttributes, ItemType, OpenMode,
+    DirectoryEntries, Error, Filesystem, Item, ItemAttributes, ItemType, MountOptions, OpenMode,
     PathConfOperations, ProbeResult, Result, SetXattrPolicy, StatFsResult, TaskOptions,
     VolumeCapabilities, VolumeIdentifier, XattrOperations, Xattrs, session,
 };
@@ -173,12 +172,13 @@ impl Filesystem for FsHandler {
 async fn main() -> session::Result<()> {
     let handler = FsHandler;
 
-    let mount_point = Path::new("/tmp/fskit-mount-point");
-    if !mount_point.exists() {
-        let _ = fs::create_dir(mount_point);
+    let opts = MountOptions::default();
+
+    if !opts.mount_point.exists() {
+        let _ = fs::create_dir(opts.mount_point.clone());
     }
 
-    let session = match fskit_rs::mount(handler, "BridgeFS", mount_point, true).await {
+    let session = match fskit_rs::mount(handler, opts).await {
         Ok(session) => session,
         Err(err) => {
             eprintln!("{err}");

@@ -353,11 +353,11 @@ message Request {
   }
 }
 
-/// A class that passes command options to a task, optionally providing security-scoped URLs.
+// A class that passes command options to a task, optionally providing security-scoped URLs.
 message TaskOptions {
-  /// An array of strings that represent command-line options for the task.
-  ///
-  /// This property is equivalent to the `argv` array of C strings passed to a command-line tool.
+  // An array of strings that represent command-line options for the task.
+  //
+  // This property is equivalent to the `argv` array of C strings passed to a command-line tool.
   repeated string task_options = 1;
 }
 

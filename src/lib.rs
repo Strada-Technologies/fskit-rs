@@ -1,5 +1,5 @@
 use std::ffi::OsStr;
-use std::path::Path;
+use std::path::PathBuf;
 
 use async_trait::async_trait;
 
@@ -149,39 +149,57 @@ pub enum Error {
     Posix(std::ffi::c_int),
 }
 
-/// Mounts a user-space filesystem at `mount_point` and returns a `Session` that
+/// Configuration for mounting the filesystem and connecting between `FSKitExt` and `fskit-rs`.
+///
+/// # Parameters
+/// * `socket_port` — TCP port for the local IPC endpoint. Default: `35367`.
+/// * `fs_type` — Filesystem type selector. On macOS FSKit this must equal `FSFileSystemType`
+///   in the appex Info.plist Default: `bridgefs`.
+/// * `mount_point` — Existing (usually empty) directory to mount onto. Use `/Volumes/<Name>`
+///   (may require `sudo`) or a user-owned path. Default: `/tmp/bridgefs-mount-point`.
+/// * `force` — If `true`, preflight **unmounts** anything already mounted at `mount_point`
+///   before mounting. Default: `true`.
+#[derive(Debug, Clone)]
+pub struct MountOptions {
+    pub socket_port: u16,
+    pub fs_type: String,
+    pub mount_point: PathBuf,
+    pub force: bool,
+}
+
+impl Default for MountOptions {
+    fn default() -> Self {
+        Self {
+            socket_port: 35367,
+            fs_type: "bridgefs".to_string(),
+            mount_point: PathBuf::from("/tmp/bridgefs-mount-point"),
+            force: true,
+        }
+    }
+}
+
+/// Mounts a user-space filesystem at `opts.mount_point` and returns a `Session` that
 /// keeps the mount alive. Non-blocking: background workers serve kernel requests;
 /// dropping `Session` cleanly unmounts.
 ///
 /// # Parameters
-/// * `filesystem` — Your `Filesystem` impl. Must be `Send + Sync + Clone + 'static`.
+/// * `fs` — Your `Filesystem` impl. Must be `Send + Sync + Clone + 'static`.
 ///   Prefer keeping heavy state in `Arc<_>`.
-/// * `fs_type` — Backend type selector. On macOS FSKit this must equal the `FSFileSystemType`
-///   in the appex Info.plist (e.g., `"BridgeFS"`).
-/// * `mount_point` — Existing (usually empty) directory to mount onto. Use `/Volumes/<Name>`
-///   (mkdir may require `sudo`) or a user-owned path.
-/// * `force` — If `true`, preflight will **unmount any existing filesystem at `mount_point`**
-///   before mounting.
+/// * `opts` — Combined mount/connection configuration.
 ///
 /// # Returns
-/// A `Session` handle; keeping it alive keeps the mount active. Dropping it unmounts.
+/// A `Session` handle; while it’s alive the mount remains active. Dropping it unmounts.
 ///
 /// # macOS (FSKit) notes
 /// * The extension must be **enabled** in System Settings (File System Extensions)
 ///   or via the in-app Extension Browser.
 /// * FSKit mounts use `noowners`; you can store/report uid/gid in metadata,
 ///   but host POSIX enforcement still be disabled.
-pub async fn mount<FS, P>(
-    filesystem: FS,
-    fs_type: &str,
-    mount_point: P,
-    force: bool,
-) -> session::Result<Session>
+pub async fn mount<FS>(fs: FS, opts: MountOptions) -> session::Result<Session>
 where
     FS: Filesystem + Send + Sync + Clone + 'static,
-    P: AsRef<Path>,
 {
-    Session::new(filesystem, fs_type, mount_point, force).await
+    Session::new(fs, opts).await
 }
 
 #[macro_export]

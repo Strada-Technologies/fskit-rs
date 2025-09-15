@@ -1,9 +1,7 @@
-use std::path::Path;
-
 use crate::handler::Handler;
 use crate::mounter::Mounter;
 use crate::socket::Socket;
-use crate::{Filesystem, mounter, socket};
+use crate::{Filesystem, MountOptions, mounter, socket};
 
 pub type Result<T> = std::result::Result<T, Error>;
 
@@ -14,21 +12,15 @@ pub struct Session {
 }
 
 impl Session {
-    pub(super) async fn new<FS, P>(
-        filesystem: FS,
-        fs_type: &str,
-        mount_point: P,
-        force: bool,
-    ) -> Result<Self>
+    pub(super) async fn new<FS>(fs: FS, opts: MountOptions) -> Result<Self>
     where
         FS: Filesystem + Send + Sync + Clone + 'static,
-        P: AsRef<Path>,
     {
-        let handler = Handler::new(filesystem);
+        let handler = Handler::new(fs);
 
-        let socket = Socket::start(handler).await?;
+        let socket = Socket::start(handler, opts.clone()).await?;
 
-        let mounter = match Mounter::mount(fs_type, mount_point.as_ref().to_path_buf(), force) {
+        let mounter = match Mounter::mount(opts) {
             Ok(mount) => mount,
             Err(err) => {
                 socket.stop().await;
