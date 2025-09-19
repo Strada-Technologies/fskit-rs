@@ -129,12 +129,12 @@ pub enum Error {
     #[error("file system extension is disabled")]
     ExtensionDisabled,
 
-    #[error("the command could not be completed, please reboot the system and try again")]
+    #[error("file system extension was updated; reboot the system and try again")]
     NeedReboot,
 
-    #[error("unable to complete the mount request")]
+    #[error("mount request failed")]
     MountFailed,
 
-    #[error("unable to complete the unmount request")]
+    #[error("unmount request failed")]
     UnmountFailed,
 }
