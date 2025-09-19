@@ -5,8 +5,8 @@ use async_trait::async_trait;
 
 pub use crate::pb::{
     CaseFormat, DirectoryEntries, Item, ItemAttributes, ItemType, OpenMode, PathConfOperations,
-    ProbeResult, SetXattrPolicy, StatFsResult, TaskOptions, VolumeCapabilities, VolumeIdentifier,
-    XattrOperations, Xattrs, directory_entries,
+    ResourceIdentifier, SetXattrPolicy, StatFsResult, TaskOptions, VolumeCapabilities,
+    VolumeIdentifier, XattrOperations, Xattrs, directory_entries,
 };
 use crate::session::Session;
 
@@ -23,8 +23,8 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 #[async_trait]
 pub trait Filesystem {
-    /// Requests that the file system probe the specified resource.
-    async fn probe_resource(&mut self) -> Result<ProbeResult>;
+    /// Get the resource identifier and name.
+    async fn get_resource_identifier(&mut self) -> Result<ResourceIdentifier>;
 
     /// Get the volume identifier and name.
     async fn get_volume_identifier(&mut self) -> Result<VolumeIdentifier>;
@@ -149,11 +149,11 @@ pub enum Error {
     Posix(std::ffi::c_int),
 }
 
-/// Configuration for mounting the filesystem and connecting between `FSKitExt` and `fskit-rs`.
+/// Configuration for mounting the file system and connecting between `FSKitExt` and `fskit-rs`.
 ///
 /// # Parameters
 /// * `socket_port` — TCP port for the local IPC endpoint. Default: `35367`.
-/// * `fs_type` — Filesystem type selector. On macOS FSKit this must equal `FSFileSystemType`
+/// * `fs_type` — File system type selector. On macOS FSKit this must equal `FSFileSystemType`
 ///   in the appex Info.plist Default: `bridgefs`.
 /// * `mount_point` — Existing (usually empty) directory to mount onto. Use `/Volumes/<Name>`
 ///   (may require `sudo`) or a user-owned path. Default: `/tmp/bridgefs-mount-point`.
@@ -178,7 +178,7 @@ impl Default for MountOptions {
     }
 }
 
-/// Mounts a user-space filesystem at `opts.mount_point` and returns a `Session` that
+/// Mounts a user-space file system at `opts.mount_point` and returns a `Session` that
 /// keeps the mount alive. Non-blocking: background workers serve kernel requests;
 /// dropping `Session` cleanly unmounts.
 ///

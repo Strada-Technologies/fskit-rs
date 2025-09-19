@@ -6,7 +6,7 @@ use tokio::signal;
 
 use fskit_rs::{
     DirectoryEntries, Error, Filesystem, Item, ItemAttributes, ItemType, MountOptions, OpenMode,
-    PathConfOperations, ProbeResult, Result, SetXattrPolicy, StatFsResult, TaskOptions,
+    PathConfOperations, ResourceIdentifier, Result, SetXattrPolicy, StatFsResult, TaskOptions,
     VolumeCapabilities, VolumeIdentifier, XattrOperations, Xattrs, session,
 };
 
@@ -15,7 +15,7 @@ struct FsHandler;
 
 #[async_trait]
 impl Filesystem for FsHandler {
-    async fn probe_resource(&mut self) -> Result<ProbeResult> {
+    async fn get_resource_identifier(&mut self) -> Result<ResourceIdentifier> {
         Err(Error::Posix(libc::ENOSYS))
     }
 

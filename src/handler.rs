@@ -23,10 +23,12 @@ where
 
     pub(super) async fn handle(&mut self, request: request::Content) -> Result<response::Content> {
         Ok(match request {
-            request::Content::ProbeResource(_) => match self.filesystem.probe_resource().await {
-                Ok(res) => response::Content::ProbeResult(res),
-                Err(Error::Posix(code)) => response::Content::PosixError(code),
-            },
+            request::Content::GetResourceIdentifier(_) => {
+                match self.filesystem.get_resource_identifier().await {
+                    Ok(res) => response::Content::ResourceIdentifier(res),
+                    Err(Error::Posix(code)) => response::Content::PosixError(code),
+                }
+            }
             request::Content::GetVolumeIdentifier(_) => {
                 match self.filesystem.get_volume_identifier().await {
                     Ok(res) => response::Content::VolumeIdentifier(res),

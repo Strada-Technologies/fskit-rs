@@ -5,8 +5,8 @@ use prost::Message;
 use tokio::io::{AsyncWriteExt, Interest};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::select;
-use tokio::sync::mpsc;
 use tokio::sync::mpsc::{Receiver, Sender};
+use tokio::sync::{broadcast, mpsc};
 
 use crate::handler::Handler;
 use crate::pb::{Request, Response};
@@ -29,11 +29,11 @@ impl Socket {
 
         tokio::spawn(async move {
             if spawn_loop(&start_tx, stop_rx, handler, opts).await.is_err() {
-                start_tx.send(false).await.unwrap();
+                let _ = start_tx.send(false).await;
             }
         });
 
-        if !start_rx.recv().await.unwrap() {
+        if !start_rx.recv().await.unwrap_or(false) {
             return Err(Error::StartFailed);
         }
 
@@ -41,7 +41,7 @@ impl Socket {
     }
 
     pub(super) async fn stop(&self) {
-        self.stop_tx.send(()).await.unwrap();
+        let _ = self.stop_tx.send(()).await;
     }
 }
 
@@ -59,19 +59,25 @@ where
     let listener = TcpListener::bind(&addr).await?;
     println!("Listening on {addr}");
 
-    start_tx.send(true).await.unwrap();
+    let _ = start_tx.send(true).await;
+
+    let (shutdown_tx, _) = broadcast::channel::<()>(2);
 
     loop {
         select! {
             Ok((stream, peer)) = listener.accept() => {
                 println!("Accepted connection from {peer}");
                 let handler = handler.clone();
+                let shutdown_rx = shutdown_tx.subscribe();
                 tokio::spawn(async move {
-                    handle_stream(stream, handler).await;
+                    if let Err(err) = handle_stream(stream, handler, shutdown_rx).await {
+                        eprintln!("connection task error: {err}");
+                    }
                 });
             }
             _ = stop_rx.recv() => {
                 println!("Stop listening");
+                let _ = shutdown_tx.send(());
                 break;
             }
         }
@@ -80,56 +86,75 @@ where
     Ok(())
 }
 
-async fn handle_stream<FS>(mut stream: TcpStream, mut handler: Handler<FS>)
+async fn handle_stream<FS>(
+    mut stream: TcpStream,
+    mut handler: Handler<FS>,
+    mut shutdown_rx: broadcast::Receiver<()>,
+) -> Result<()>
 where
     FS: Filesystem + Send + Sync + Clone + 'static,
 {
     let mut buf = BytesMut::with_capacity(4096);
     loop {
-        if stream.ready(Interest::READABLE).await.is_ok() {
-            match stream.try_read_buf(&mut buf) {
-                Ok(0) => {
-                    println!("Connection closed: {stream:?}");
-                    break;
-                }
-                Ok(_) => {
-                    while buf.has_remaining() {
-                        let mut frozen = buf.clone().freeze();
-                        match Request::decode_length_delimited(&mut frozen) {
-                            Ok(request) => {
-                                println!("Received message: {request:?}");
-                                buf.advance(buf.len() - frozen.remaining());
+        select! {
+            _ = shutdown_rx.recv() => {
+                let _ = stream.shutdown().await;
+                println!("Connection closed by shutdown: {stream:?}");
+                return Ok(());
+            }
 
-                                let content = handler.handle(request.content.unwrap()).await.ok();
+            r = stream.ready(Interest::READABLE) => {
+                r?;
+                match stream.try_read_buf(&mut buf) {
+                    Ok(0) => {
+                        println!("Connection closed by peer: {stream:?}");
+                        return Ok(());
+                    }
+                    Ok(_) => {
+                        while buf.has_remaining() {
+                            let mut frozen = buf.clone().freeze();
+                            match Request::decode_length_delimited(&mut frozen) {
+                                Ok(request) => {
+                                    println!("Received message: {request:?}");
+                                    buf.advance(buf.len() - frozen.remaining());
 
-                                let response = Response {
-                                    request_id: request.id,
-                                    content,
-                                };
+                                    let content = handler.handle(request.content.unwrap()).await.ok();
 
-                                let mut out = Vec::with_capacity(4096);
-                                response.encode_length_delimited(&mut out).unwrap();
+                                    let response = Response {
+                                        request_id: request.id,
+                                        content,
+                                    };
 
-                                if let Err(err) = stream.write_all(&out).await {
-                                    eprintln!("Write error: {err}");
+                                    let mut out = Vec::with_capacity(4096);
+                                    response.encode_length_delimited(&mut out).unwrap();
+
+                                    stream.ready(Interest::WRITABLE).await?;
+                                    if let Err(err) = stream.write_all(&out).await {
+                                        eprintln!("Write error: {err}");
+                                        return Err(err.into());
+                                    }
                                 }
-                            }
-                            Err(err) => {
-                                let s = err.to_string();
-                                if !s.contains("failed to decode length prefix")
-                                    && !s.contains("buffer underflow")
-                                {
-                                    eprintln!("Decode error: {err}");
+                                Err(err) => {
+                                    let s = err.to_string();
+                                    if !s.contains("failed to decode length prefix")
+                                        && !s.contains("buffer underflow")
+                                    {
+                                        eprintln!("Decode error: {err}");
+                                        return Err(err.into());
+                                    }
+                                    break;
                                 }
-                                break;
                             }
                         }
                     }
+                    Err(err) if err.kind() == std::io::ErrorKind::WouldBlock => {
+                        continue;
+                    }
+                    Err(err) => {
+                        eprintln!("Read error: {err}");
+                        return Err(err.into());
+                    }
                 }
-                Err(err) if err.kind() == std::io::ErrorKind::WouldBlock => {
-                    continue;
-                }
-                Err(err) => eprintln!("Read error: {err}"),
             }
         }
     }
@@ -139,6 +164,9 @@ where
 pub enum Error {
     #[error(transparent)]
     Io(#[from] std::io::Error),
+
+    #[error(transparent)]
+    DecodeError(#[from] prost::DecodeError),
 
     #[error("socket failed to start")]
     StartFailed,

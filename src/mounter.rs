@@ -1,6 +1,8 @@
 use std::fs::File;
 use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::process::{Command, Stdio};
+use std::thread;
+use std::time::{Duration, Instant};
 
 use crate::{MountOptions, path};
 
@@ -13,7 +15,7 @@ pub(super) struct Mounter {
 
 impl Mounter {
     pub(super) fn mount(opts: MountOptions) -> Result<Self> {
-        // Force unmount a filesystem
+        // Force unmount a file system
         if opts.force {
             let _ = unmount(&opts.mount_point);
         }
@@ -40,26 +42,50 @@ impl Mounter {
             .output()?;
         let device = std::str::from_utf8(&output.stdout).unwrap().trim();
 
-        // Mount a filesystem
+        // Mount a file system
         let args = format!(
-            "-F -t {} -o port={} {device} {}",
-            opts.socket_port,
+            "-F -t {} {} {}",
             opts.fs_type,
+            device,
             path!(opts.mount_point)
         );
-        let status = Command::new("mount")
+        let mut process = Command::new("mount")
             .args(args.split_whitespace())
-            .status()?;
-        if !status.success() {
-            return if status.code().unwrap_or(1) == 69 {
-                Err(Error::MountPointBusy)
-            } else {
-                Err(Error::MountFailed)
-            };
+            .stderr(Stdio::piped())
+            .spawn()?;
+        let start = Instant::now();
+        loop {
+            match process.try_wait()? {
+                Some(status) => {
+                    if status.success() {
+                        break;
+                    }
+                    let stderr = process.wait_with_output()?.stderr;
+                    let out = std::str::from_utf8(&stderr).unwrap();
+                    eprintln!("{out}");
+                    return if out.contains("is disabled") {
+                        Err(Error::ExtensionDisabled)
+                    } else if out.contains("Resource busy") {
+                        Err(Error::MountPointBusy)
+                    } else if out.contains("Probing resource") || out.contains("Loading resource") {
+                        Err(Error::NeedReboot)
+                    } else {
+                        Err(Error::MountFailed)
+                    };
+                }
+                None => {
+                    if start.elapsed() >= Duration::from_secs(3) {
+                        eprintln!("mount command hung, killing process");
+                        let _ = process.kill();
+                        return Err(Error::NeedReboot);
+                    }
+                    thread::sleep(Duration::from_millis(100));
+                }
+            }
         }
 
         println!(
-            "Filesystem mounted - type: {}, mount point: {} ({device})",
+            "File system mounted - type: {}, mount point: {} ({device})",
             opts.fs_type,
             path!(opts.mount_point)
         );
@@ -71,7 +97,7 @@ impl Mounter {
 
     pub(super) fn unmount(&self) -> Result<()> {
         unmount(&self.path)?;
-        println!("Filesystem unmounted - mount point: {}", path!(self.path));
+        println!("File system unmounted - mount point: {}", path!(self.path));
         Ok(())
     }
 }
@@ -99,6 +125,12 @@ pub enum Error {
 
     #[error("mount point is already in use")]
     MountPointBusy,
+
+    #[error("file system extension is disabled")]
+    ExtensionDisabled,
+
+    #[error("the command could not be completed, please reboot the system and try again")]
+    NeedReboot,
 
     #[error("unable to complete the mount request")]
     MountFailed,
