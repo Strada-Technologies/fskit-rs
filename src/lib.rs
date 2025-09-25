@@ -3,6 +3,7 @@ use std::path::PathBuf;
 
 use async_trait::async_trait;
 
+pub use crate::pb::request::check_access::AccessMask;
 pub use crate::pb::{
     CaseFormat, DirectoryEntries, InhibitedOperations, Item, ItemAttributes, ItemType, OpenMode,
     PathConfOperations, ResourceIdentifier, SetXattrPolicy, StatFsResult, TaskOptions,
@@ -142,6 +143,9 @@ pub trait Filesystem {
 
     /// Writes contents to the given file item.
     async fn write(&mut self, contents: Vec<u8>, item_id: u64, offset: i64) -> Result<i64>;
+
+    /// Checks whether the file system allows access to the given item.
+    async fn check_access(&mut self, item_id: u64, access: Vec<AccessMask>) -> Result<bool>;
 }
 
 #[derive(thiserror::Error, Debug)]

@@ -5,9 +5,10 @@ use async_trait::async_trait;
 use tokio::signal;
 
 use fskit_rs::{
-    DirectoryEntries, Error, Filesystem, InhibitedOperations, Item, ItemAttributes, ItemType,
-    MountOptions, OpenMode, PathConfOperations, ResourceIdentifier, Result, SetXattrPolicy,
-    StatFsResult, TaskOptions, VolumeCapabilities, VolumeIdentifier, Xattrs, session,
+    AccessMask, DirectoryEntries, Error, Filesystem, InhibitedOperations, Item, ItemAttributes,
+    ItemType, MountOptions, OpenMode, PathConfOperations, ResourceIdentifier, Result,
+    SetXattrPolicy, StatFsResult, TaskOptions, VolumeCapabilities, VolumeIdentifier, Xattrs,
+    session,
 };
 
 #[derive(Clone)]
@@ -164,6 +165,10 @@ impl Filesystem for FsHandler {
     }
 
     async fn write(&mut self, _contents: Vec<u8>, _item_id: u64, _offset: i64) -> Result<i64> {
+        Err(Error::Posix(libc::ENOSYS))
+    }
+
+    async fn check_access(&mut self, _item_id: u64, _access: Vec<AccessMask>) -> Result<bool> {
         Err(Error::Posix(libc::ENOSYS))
     }
 }

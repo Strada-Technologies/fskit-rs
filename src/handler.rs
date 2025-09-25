@@ -1,8 +1,8 @@
 use std::ffi::OsString;
 use std::os::unix::ffi::OsStringExt;
 
-use crate::Result;
 use crate::pb::{Success, request, response};
+use crate::{AccessMask, Result};
 use crate::{Error, Filesystem, ItemType, OpenMode, SetXattrPolicy};
 
 #[derive(Clone, Debug)]
@@ -81,26 +81,22 @@ where
                     Err(Error::Posix(code)) => response::Content::PosixError(code),
                 }
             }
-            request::Content::SetAttributes(msg) => {
-                match self
-                    .filesystem
-                    .set_attributes(msg.item_id, msg.attributes.unwrap())
-                    .await
-                {
-                    Ok(attrs) => response::Content::ItemAttributes(attrs),
-                    Err(Error::Posix(code)) => response::Content::PosixError(code),
-                }
-            }
-            request::Content::LookupItem(msg) => {
-                match self
-                    .filesystem
-                    .lookup_item(&OsString::from_vec(msg.name), msg.directory_id)
-                    .await
-                {
-                    Ok(item) => response::Content::Item(item),
-                    Err(Error::Posix(code)) => response::Content::PosixError(code),
-                }
-            }
+            request::Content::SetAttributes(msg) => match self
+                .filesystem
+                .set_attributes(msg.item_id, msg.attributes.unwrap())
+                .await
+            {
+                Ok(attrs) => response::Content::ItemAttributes(attrs),
+                Err(Error::Posix(code)) => response::Content::PosixError(code),
+            },
+            request::Content::LookupItem(msg) => match self
+                .filesystem
+                .lookup_item(&OsString::from_vec(msg.name), msg.directory_id)
+                .await
+            {
+                Ok(item) => response::Content::Item(item),
+                Err(Error::Posix(code)) => response::Content::PosixError(code),
+            },
             request::Content::ReclaimItem(msg) => {
                 match self.filesystem.reclaim_item(msg.item_id).await {
                     Ok(_) => response::Content::Success(Success {}),
@@ -113,36 +109,32 @@ where
                     Err(Error::Posix(code)) => response::Content::PosixError(code),
                 }
             }
-            request::Content::CreateItem(msg) => {
-                match self
-                    .filesystem
-                    .create_item(
-                        &OsString::from_vec(msg.name),
-                        ItemType::try_from(msg.r#type).unwrap(),
-                        msg.directory_id,
-                        msg.attributes.unwrap(),
-                    )
-                    .await
-                {
-                    Ok(item) => response::Content::Item(item),
-                    Err(Error::Posix(code)) => response::Content::PosixError(code),
-                }
-            }
-            request::Content::CreateSymbolicLink(msg) => {
-                match self
-                    .filesystem
-                    .create_symbolic_link(
-                        &OsString::from_vec(msg.name),
-                        msg.directory_id,
-                        msg.new_attributes.unwrap(),
-                        msg.contents,
-                    )
-                    .await
-                {
-                    Ok(item) => response::Content::Item(item),
-                    Err(Error::Posix(code)) => response::Content::PosixError(code),
-                }
-            }
+            request::Content::CreateItem(msg) => match self
+                .filesystem
+                .create_item(
+                    &OsString::from_vec(msg.name),
+                    ItemType::try_from(msg.r#type).unwrap(),
+                    msg.directory_id,
+                    msg.attributes.unwrap(),
+                )
+                .await
+            {
+                Ok(item) => response::Content::Item(item),
+                Err(Error::Posix(code)) => response::Content::PosixError(code),
+            },
+            request::Content::CreateSymbolicLink(msg) => match self
+                .filesystem
+                .create_symbolic_link(
+                    &OsString::from_vec(msg.name),
+                    msg.directory_id,
+                    msg.new_attributes.unwrap(),
+                    msg.contents,
+                )
+                .await
+            {
+                Ok(item) => response::Content::Item(item),
+                Err(Error::Posix(code)) => response::Content::PosixError(code),
+            },
             request::Content::RemoveItem(msg) => match self
                 .filesystem
                 .remove_item(msg.item_id, &OsString::from_vec(msg.name), msg.directory_id)
@@ -166,16 +158,14 @@ where
                 Ok(data) => response::Content::Data(data),
                 Err(Error::Posix(code)) => response::Content::PosixError(code),
             },
-            request::Content::EnumerateDirectory(msg) => {
-                match self
-                    .filesystem
-                    .enumerate_directory(msg.directory_id, msg.cookie, msg.verifier)
-                    .await
-                {
-                    Ok(entries) => response::Content::DirectoryEntries(entries),
-                    Err(Error::Posix(code)) => response::Content::PosixError(code),
-                }
-            }
+            request::Content::EnumerateDirectory(msg) => match self
+                .filesystem
+                .enumerate_directory(msg.directory_id, msg.cookie, msg.verifier)
+                .await
+            {
+                Ok(entries) => response::Content::DirectoryEntries(entries),
+                Err(Error::Posix(code)) => response::Content::PosixError(code),
+            },
             request::Content::Activate(msg) => {
                 match self.filesystem.activate(msg.options.unwrap()).await {
                     Ok(item) => response::Content::Item(item),
@@ -207,32 +197,27 @@ where
                 Ok(_) => response::Content::Success(Success {}),
                 Err(Error::Posix(code)) => response::Content::PosixError(code),
             },
-            request::Content::GetXattrs(msg) => {
-                match self.filesystem.get_xattrs(msg.item_id).await {
-                    Ok(xattrs) => response::Content::Xattrs(xattrs),
-                    Err(Error::Posix(code)) => response::Content::PosixError(code),
-                }
-            }
-            request::Content::OpenItem(msg) => {
-                match self
-                    .filesystem
-                    .open_item(msg.item_id, to_open_modes(msg.modes))
-                    .await
-                {
-                    Ok(_) => response::Content::Success(Success {}),
-                    Err(Error::Posix(code)) => response::Content::PosixError(code),
-                }
-            }
-            request::Content::CloseItem(msg) => {
-                match self
-                    .filesystem
-                    .close_item(msg.item_id, to_open_modes(msg.modes))
-                    .await
-                {
-                    Ok(_) => response::Content::Success(Success {}),
-                    Err(Error::Posix(code)) => response::Content::PosixError(code),
-                }
-            }
+            request::Content::GetXattrs(msg) => match self.filesystem.get_xattrs(msg.item_id).await
+            {
+                Ok(xattrs) => response::Content::Xattrs(xattrs),
+                Err(Error::Posix(code)) => response::Content::PosixError(code),
+            },
+            request::Content::OpenItem(msg) => match self
+                .filesystem
+                .open_item(msg.item_id, to_open_modes(msg.modes))
+                .await
+            {
+                Ok(_) => response::Content::Success(Success {}),
+                Err(Error::Posix(code)) => response::Content::PosixError(code),
+            },
+            request::Content::CloseItem(msg) => match self
+                .filesystem
+                .close_item(msg.item_id, to_open_modes(msg.modes))
+                .await
+            {
+                Ok(_) => response::Content::Success(Success {}),
+                Err(Error::Posix(code)) => response::Content::PosixError(code),
+            },
             request::Content::Read(msg) => match self
                 .filesystem
                 .read(msg.item_id, msg.offset, msg.length)
@@ -247,6 +232,20 @@ where
                 .await
             {
                 Ok(count) => response::Content::ByteCount(count),
+                Err(Error::Posix(code)) => response::Content::PosixError(code),
+            },
+            request::Content::CheckAccess(msg) => match self
+                .filesystem
+                .check_access(
+                    msg.item_id,
+                    msg.access
+                        .iter()
+                        .filter_map(|&raw| AccessMask::try_from(raw).ok())
+                        .collect(),
+                )
+                .await
+            {
+                Ok(allow) => response::Content::Allow(allow),
                 Err(Error::Posix(code)) => response::Content::PosixError(code),
             },
         })
