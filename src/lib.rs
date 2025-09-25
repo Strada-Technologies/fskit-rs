@@ -4,9 +4,9 @@ use std::path::PathBuf;
 use async_trait::async_trait;
 
 pub use crate::pb::{
-    CaseFormat, DirectoryEntries, Item, ItemAttributes, ItemType, OpenMode, PathConfOperations,
-    ResourceIdentifier, SetXattrPolicy, StatFsResult, TaskOptions, VolumeCapabilities,
-    VolumeIdentifier, XattrOperations, Xattrs, directory_entries,
+    CaseFormat, DirectoryEntries, InhibitedOperations, Item, ItemAttributes, ItemType, OpenMode,
+    PathConfOperations, ResourceIdentifier, SetXattrPolicy, StatFsResult, TaskOptions,
+    VolumeCapabilities, VolumeIdentifier, Xattrs, directory_entries,
 };
 use crate::session::Session;
 
@@ -28,6 +28,10 @@ pub trait Filesystem {
 
     /// Get the volume identifier and name.
     async fn get_volume_identifier(&mut self) -> Result<VolumeIdentifier>;
+
+    /// Get properties that instruct FSKit not to call the protocol methods,
+    /// even if the volume conforms to it.
+    async fn get_inhibited_operations(&mut self) -> Result<InhibitedOperations>;
 
     /// Properties implemented by volumes that support providing the values of system limits or options.
     async fn get_path_conf_operations(&mut self) -> Result<PathConfOperations>;
@@ -111,9 +115,6 @@ pub trait Filesystem {
 
     /// Tears down a previously initialized volume instance.
     async fn deactivate(&mut self) -> Result<()>;
-
-    /// Properties implemented by volumes that natively or partially support extended attributes.
-    async fn get_xattr_operations(&mut self) -> Result<XattrOperations>;
 
     /// Gets the specified extended attribute of the given item.
     async fn get_xattr(&mut self, name: &OsStr, item_id: u64) -> Result<Vec<u8>>;

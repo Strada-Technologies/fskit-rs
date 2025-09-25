@@ -35,6 +35,12 @@ where
                     Err(Error::Posix(code)) => response::Content::PosixError(code),
                 }
             }
+            request::Content::GetInhibitedOperations(_) => {
+                match self.filesystem.get_inhibited_operations().await {
+                    Ok(res) => response::Content::InhibitedOperations(res),
+                    Err(Error::Posix(code)) => response::Content::PosixError(code),
+                }
+            }
             request::Content::GetPathConfOperations(_) => {
                 match self.filesystem.get_path_conf_operations().await {
                     Ok(res) => response::Content::PathConfOperations(res),
@@ -180,9 +186,6 @@ where
                 Ok(_) => response::Content::Success(Success {}),
                 Err(Error::Posix(code)) => response::Content::PosixError(code),
             },
-            request::Content::GetXattrOperations(_) => {
-                response::Content::XattrOperations(self.filesystem.get_xattr_operations().await?)
-            }
             request::Content::GetXattr(msg) => match self
                 .filesystem
                 .get_xattr(&OsString::from_vec(msg.name), msg.item_id)

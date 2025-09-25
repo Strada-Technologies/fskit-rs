@@ -5,9 +5,9 @@ use async_trait::async_trait;
 use tokio::signal;
 
 use fskit_rs::{
-    DirectoryEntries, Error, Filesystem, Item, ItemAttributes, ItemType, MountOptions, OpenMode,
-    PathConfOperations, ResourceIdentifier, Result, SetXattrPolicy, StatFsResult, TaskOptions,
-    VolumeCapabilities, VolumeIdentifier, XattrOperations, Xattrs, session,
+    DirectoryEntries, Error, Filesystem, InhibitedOperations, Item, ItemAttributes, ItemType,
+    MountOptions, OpenMode, PathConfOperations, ResourceIdentifier, Result, SetXattrPolicy,
+    StatFsResult, TaskOptions, VolumeCapabilities, VolumeIdentifier, Xattrs, session,
 };
 
 #[derive(Clone)]
@@ -20,6 +20,10 @@ impl Filesystem for FsHandler {
     }
 
     async fn get_volume_identifier(&mut self) -> Result<VolumeIdentifier> {
+        Err(Error::Posix(libc::ENOSYS))
+    }
+
+    async fn get_inhibited_operations(&mut self) -> Result<InhibitedOperations> {
         Err(Error::Posix(libc::ENOSYS))
     }
 
@@ -126,10 +130,6 @@ impl Filesystem for FsHandler {
     }
 
     async fn deactivate(&mut self) -> Result<()> {
-        Err(Error::Posix(libc::ENOSYS))
-    }
-
-    async fn get_xattr_operations(&mut self) -> Result<XattrOperations> {
         Err(Error::Posix(libc::ENOSYS))
     }
 
