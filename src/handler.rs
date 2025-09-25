@@ -2,7 +2,7 @@ use std::ffi::OsString;
 use std::os::unix::ffi::OsStringExt;
 
 use crate::pb::{Success, request, response};
-use crate::{AccessMask, Result};
+use crate::{AccessMask, PreallocateFlags, Result};
 use crate::{Error, Filesystem, ItemType, OpenMode, SetXattrPolicy};
 
 #[derive(Clone, Debug)]
@@ -254,6 +254,22 @@ where
                     Err(Error::Posix(code)) => response::Content::PosixError(code),
                 }
             }
+            request::Content::PreallocateSpace(msg) => match self
+                .filesystem
+                .preallocate_space(
+                    msg.item_id,
+                    msg.offset,
+                    msg.length,
+                    msg.flags
+                        .iter()
+                        .filter_map(|&raw| PreallocateFlags::try_from(raw).ok())
+                        .collect(),
+                )
+                .await
+            {
+                Ok(count) => response::Content::ByteCount(count),
+                Err(Error::Posix(code)) => response::Content::PosixError(code),
+            },
         })
     }
 }

@@ -4,6 +4,7 @@ use std::path::PathBuf;
 use async_trait::async_trait;
 
 pub use crate::pb::request::check_access::AccessMask;
+pub use crate::pb::request::preallocate_space::PreallocateFlags;
 pub use crate::pb::{
     CaseFormat, DirectoryEntries, InhibitedOperations, Item, ItemAttributes, ItemType, OpenMode,
     PathConfOperations, ResourceIdentifier, SetXattrPolicy, StatFsResult, TaskOptions,
@@ -149,6 +150,15 @@ pub trait Filesystem {
 
     /// Sets a new name for the volume.
     async fn set_volume_name(&mut self, name: Vec<u8>) -> Result<Vec<u8>>;
+
+    /// Preallocate disk space for the given item.
+    async fn preallocate_space(
+        &mut self,
+        item_id: u64,
+        offset: i64,
+        length: i64,
+        flags: Vec<PreallocateFlags>,
+    ) -> Result<i64>;
 }
 
 #[derive(thiserror::Error, Debug)]

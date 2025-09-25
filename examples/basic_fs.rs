@@ -6,9 +6,9 @@ use tokio::signal;
 
 use fskit_rs::{
     AccessMask, DirectoryEntries, Error, Filesystem, InhibitedOperations, Item, ItemAttributes,
-    ItemType, MountOptions, OpenMode, PathConfOperations, ResourceIdentifier, Result,
-    SetXattrPolicy, StatFsResult, TaskOptions, VolumeCapabilities, VolumeIdentifier, Xattrs,
-    session,
+    ItemType, MountOptions, OpenMode, PathConfOperations, PreallocateFlags, ResourceIdentifier,
+    Result, SetXattrPolicy, StatFsResult, TaskOptions, VolumeCapabilities, VolumeIdentifier,
+    Xattrs, session,
 };
 
 #[derive(Clone)]
@@ -173,6 +173,16 @@ impl Filesystem for FsHandler {
     }
 
     async fn set_volume_name(&mut self, _name: Vec<u8>) -> Result<Vec<u8>> {
+        Err(Error::Posix(libc::ENOSYS))
+    }
+
+    async fn preallocate_space(
+        &mut self,
+        _item_id: u64,
+        _offset: i64,
+        _length: i64,
+        _flags: Vec<PreallocateFlags>,
+    ) -> Result<i64> {
         Err(Error::Posix(libc::ENOSYS))
     }
 }
