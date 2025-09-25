@@ -146,6 +146,9 @@ pub trait Filesystem {
 
     /// Checks whether the file system allows access to the given item.
     async fn check_access(&mut self, item_id: u64, access: Vec<AccessMask>) -> Result<bool>;
+
+    /// Sets a new name for the volume.
+    async fn set_volume_name(&mut self, name: Vec<u8>) -> Result<Vec<u8>>;
 }
 
 #[derive(thiserror::Error, Debug)]

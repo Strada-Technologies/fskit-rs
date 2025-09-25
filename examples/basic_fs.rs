@@ -171,6 +171,10 @@ impl Filesystem for FsHandler {
     async fn check_access(&mut self, _item_id: u64, _access: Vec<AccessMask>) -> Result<bool> {
         Err(Error::Posix(libc::ENOSYS))
     }
+
+    async fn set_volume_name(&mut self, _name: Vec<u8>) -> Result<Vec<u8>> {
+        Err(Error::Posix(libc::ENOSYS))
+    }
 }
 
 #[tokio::main]

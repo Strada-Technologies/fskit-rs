@@ -248,6 +248,12 @@ where
                 Ok(allow) => response::Content::Allow(allow),
                 Err(Error::Posix(code)) => response::Content::PosixError(code),
             },
+            request::Content::SetVolumeName(msg) => {
+                match self.filesystem.set_volume_name(msg.name).await {
+                    Ok(data) => response::Content::Data(data),
+                    Err(Error::Posix(code)) => response::Content::PosixError(code),
+                }
+            }
         })
     }
 }
