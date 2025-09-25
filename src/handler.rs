@@ -2,7 +2,7 @@ use std::ffi::OsString;
 use std::os::unix::ffi::OsStringExt;
 
 use crate::pb::{Success, request, response};
-use crate::{AccessMask, PreallocateFlags, Result};
+use crate::{AccessMask, PreallocateFlags, Result, SyncFlags};
 use crate::{Error, Filesystem, ItemType, OpenMode, SetXattrPolicy};
 
 #[derive(Clone, Debug)]
@@ -69,12 +69,14 @@ where
                 Ok(_) => response::Content::Success(Success {}),
                 Err(Error::Posix(code)) => response::Content::PosixError(code),
             },
-            request::Content::Synchronize(msg) => {
-                match self.filesystem.synchronize(msg.flags).await {
-                    Ok(_) => response::Content::Success(Success {}),
-                    Err(Error::Posix(code)) => response::Content::PosixError(code),
-                }
-            }
+            request::Content::Synchronize(msg) => match self
+                .filesystem
+                .synchronize(SyncFlags::try_from(msg.flags).unwrap_or_default())
+                .await
+            {
+                Ok(_) => response::Content::Success(Success {}),
+                Err(Error::Posix(code)) => response::Content::PosixError(code),
+            },
             request::Content::GetAttributes(msg) => {
                 match self.filesystem.get_attributes(msg.item_id).await {
                     Ok(attrs) => response::Content::ItemAttributes(attrs),

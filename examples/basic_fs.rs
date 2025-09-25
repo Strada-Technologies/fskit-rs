@@ -7,8 +7,8 @@ use tokio::signal;
 use fskit_rs::{
     AccessMask, DirectoryEntries, Error, Filesystem, InhibitedOperations, Item, ItemAttributes,
     ItemType, MountOptions, OpenMode, PathConfOperations, PreallocateFlags, ResourceIdentifier,
-    Result, SetXattrPolicy, StatFsResult, TaskOptions, VolumeCapabilities, VolumeIdentifier,
-    Xattrs, session,
+    Result, SetXattrPolicy, StatFsResult, SyncFlags, TaskOptions, VolumeCapabilities,
+    VolumeIdentifier, Xattrs, session,
 };
 
 #[derive(Clone)]
@@ -48,7 +48,7 @@ impl Filesystem for FsHandler {
         Err(Error::Posix(libc::ENOSYS))
     }
 
-    async fn synchronize(&mut self, _flags: u32) -> Result<()> {
+    async fn synchronize(&mut self, _flags: SyncFlags) -> Result<()> {
         Err(Error::Posix(libc::ENOSYS))
     }
 

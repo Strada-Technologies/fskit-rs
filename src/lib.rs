@@ -5,6 +5,7 @@ use async_trait::async_trait;
 
 pub use crate::pb::request::check_access::AccessMask;
 pub use crate::pb::request::preallocate_space::PreallocateFlags;
+pub use crate::pb::request::synchronize::SyncFlags;
 pub use crate::pb::{
     CaseFormat, DirectoryEntries, InhibitedOperations, Item, ItemAttributes, ItemType, OpenMode,
     PathConfOperations, ResourceIdentifier, SetXattrPolicy, StatFsResult, TaskOptions,
@@ -51,7 +52,7 @@ pub trait Filesystem {
     async fn unmount(&mut self) -> Result<()>;
 
     /// Synchronizes the volume with its underlying resource.
-    async fn synchronize(&mut self, flags: u32) -> Result<()>;
+    async fn synchronize(&mut self, flags: SyncFlags) -> Result<()>;
 
     /// Fetches attributes for the given item.
     async fn get_attributes(&mut self, item_id: u64) -> Result<ItemAttributes>;
