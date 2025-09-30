@@ -5,10 +5,10 @@ use async_trait::async_trait;
 use tokio::signal;
 
 use fskit_rs::{
-    AccessMask, DirectoryEntries, Error, Filesystem, InhibitedOperations, Item, ItemAttributes,
-    ItemType, MountOptions, OpenMode, PathConfOperations, PreallocateFlags, ResourceIdentifier,
-    Result, SetXattrPolicy, StatFsResult, SyncFlags, TaskOptions, VolumeCapabilities,
-    VolumeIdentifier, Xattrs, session,
+    AccessMask, DirectoryEntries, Error, Filesystem, Item, ItemAttributes, ItemType, MountOptions,
+    OpenMode, PathConfOperations, PreallocateFlag, ResourceIdentifier, Result, SetXattrPolicy,
+    StatFsResult, SupportedCapabilities, SyncFlags, TaskOptions, VolumeBehavior, VolumeIdentifier,
+    Xattrs, session,
 };
 
 #[derive(Clone)]
@@ -24,7 +24,7 @@ impl Filesystem for FsHandler {
         Err(Error::Posix(libc::ENOSYS))
     }
 
-    async fn get_inhibited_operations(&mut self) -> Result<InhibitedOperations> {
+    async fn get_volume_behavior(&mut self) -> Result<VolumeBehavior> {
         Err(Error::Posix(libc::ENOSYS))
     }
 
@@ -32,7 +32,7 @@ impl Filesystem for FsHandler {
         Err(Error::Posix(libc::ENOSYS))
     }
 
-    async fn get_volume_capabilities(&mut self) -> Result<VolumeCapabilities> {
+    async fn get_volume_capabilities(&mut self) -> Result<SupportedCapabilities> {
         Err(Error::Posix(libc::ENOSYS))
     }
 
@@ -96,6 +96,15 @@ impl Filesystem for FsHandler {
         Err(Error::Posix(libc::ENOSYS))
     }
 
+    async fn create_link(
+        &mut self,
+        _item_id: u64,
+        _name: &OsStr,
+        _directory_id: u64,
+    ) -> Result<Vec<u8>> {
+        Err(Error::Posix(libc::ENOSYS))
+    }
+
     async fn remove_item(
         &mut self,
         _item_id: u64,
@@ -131,6 +140,10 @@ impl Filesystem for FsHandler {
     }
 
     async fn deactivate(&mut self) -> Result<()> {
+        Err(Error::Posix(libc::ENOSYS))
+    }
+
+    async fn get_supported_xattr_names(&mut self, _item_id: u64) -> Result<Xattrs> {
         Err(Error::Posix(libc::ENOSYS))
     }
 
@@ -181,8 +194,12 @@ impl Filesystem for FsHandler {
         _item_id: u64,
         _offset: i64,
         _length: i64,
-        _flags: Vec<PreallocateFlags>,
+        _flags: Vec<PreallocateFlag>,
     ) -> Result<i64> {
+        Err(Error::Posix(libc::ENOSYS))
+    }
+
+    async fn deactivate_item(&mut self, _item_id: u64) -> Result<()> {
         Err(Error::Posix(libc::ENOSYS))
     }
 }

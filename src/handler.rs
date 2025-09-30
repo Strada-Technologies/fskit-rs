@@ -1,9 +1,12 @@
 use std::ffi::OsString;
 use std::os::unix::ffi::OsStringExt;
 
+use crate::pb::check_access::AccessMask;
+use crate::pb::preallocate_space::PreallocateFlag;
+use crate::pb::set_xattr::SetXattrPolicy;
+use crate::pb::synchronize::SyncFlags;
 use crate::pb::{Success, request, response};
-use crate::{AccessMask, PreallocateFlags, Result, SyncFlags};
-use crate::{Error, Filesystem, ItemType, OpenMode, SetXattrPolicy};
+use crate::{Error, Filesystem, ItemType, OpenMode, Result};
 
 #[derive(Clone, Debug)]
 pub(super) struct Handler<FS>
@@ -35,9 +38,9 @@ where
                     Err(Error::Posix(code)) => response::Content::PosixError(code),
                 }
             }
-            request::Content::GetInhibitedOperations(_) => {
-                match self.filesystem.get_inhibited_operations().await {
-                    Ok(res) => response::Content::InhibitedOperations(res),
+            request::Content::GetVolumeBehavior(_) => {
+                match self.filesystem.get_volume_behavior().await {
+                    Ok(res) => response::Content::VolumeBehavior(res),
                     Err(Error::Posix(code)) => response::Content::PosixError(code),
                 }
             }
@@ -49,7 +52,7 @@ where
             }
             request::Content::GetVolumeCapabilities(_) => {
                 match self.filesystem.get_volume_capabilities().await {
-                    Ok(res) => response::Content::VolumeCapabilities(res),
+                    Ok(res) => response::Content::SupportedCapabilities(res),
                     Err(Error::Posix(code)) => response::Content::PosixError(code),
                 }
             }
@@ -137,6 +140,14 @@ where
                 Ok(item) => response::Content::Item(item),
                 Err(Error::Posix(code)) => response::Content::PosixError(code),
             },
+            request::Content::CreateLink(msg) => match self
+                .filesystem
+                .create_link(msg.item_id, &OsString::from_vec(msg.name), msg.directory_id)
+                .await
+            {
+                Ok(data) => response::Content::Data(data),
+                Err(Error::Posix(code)) => response::Content::PosixError(code),
+            },
             request::Content::RemoveItem(msg) => match self
                 .filesystem
                 .remove_item(msg.item_id, &OsString::from_vec(msg.name), msg.directory_id)
@@ -178,6 +189,12 @@ where
                 Ok(_) => response::Content::Success(Success {}),
                 Err(Error::Posix(code)) => response::Content::PosixError(code),
             },
+            request::Content::GetSupportedXattrNames(msg) => {
+                match self.filesystem.get_supported_xattr_names(msg.item_id).await {
+                    Ok(xattrs) => response::Content::Xattrs(xattrs),
+                    Err(Error::Posix(code)) => response::Content::PosixError(code),
+                }
+            }
             request::Content::GetXattr(msg) => match self
                 .filesystem
                 .get_xattr(&OsString::from_vec(msg.name), msg.item_id)
@@ -264,7 +281,7 @@ where
                     msg.length,
                     msg.flags
                         .iter()
-                        .filter_map(|&raw| PreallocateFlags::try_from(raw).ok())
+                        .filter_map(|&raw| PreallocateFlag::try_from(raw).ok())
                         .collect(),
                 )
                 .await
@@ -272,6 +289,12 @@ where
                 Ok(count) => response::Content::ByteCount(count),
                 Err(Error::Posix(code)) => response::Content::PosixError(code),
             },
+            request::Content::DeactivateItem(msg) => {
+                match self.filesystem.deactivate_item(msg.item_id).await {
+                    Ok(_) => response::Content::Success(Success {}),
+                    Err(Error::Posix(code)) => response::Content::PosixError(code),
+                }
+            }
         })
     }
 }

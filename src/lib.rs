@@ -3,13 +3,15 @@ use std::path::PathBuf;
 
 use async_trait::async_trait;
 
-pub use crate::pb::request::check_access::AccessMask;
-pub use crate::pb::request::preallocate_space::PreallocateFlags;
-pub use crate::pb::request::synchronize::SyncFlags;
+pub use crate::pb::check_access::AccessMask;
+pub use crate::pb::preallocate_space::PreallocateFlag;
+pub use crate::pb::set_xattr::SetXattrPolicy;
+pub use crate::pb::supported_capabilities::CaseFormat;
+pub use crate::pb::synchronize::SyncFlags;
 pub use crate::pb::{
-    CaseFormat, DirectoryEntries, InhibitedOperations, Item, ItemAttributes, ItemType, OpenMode,
-    PathConfOperations, ResourceIdentifier, SetXattrPolicy, StatFsResult, TaskOptions,
-    VolumeCapabilities, VolumeIdentifier, Xattrs, directory_entries,
+    DirectoryEntries, Item, ItemAttributes, ItemType, OpenMode, PathConfOperations,
+    ResourceIdentifier, StatFsResult, SupportedCapabilities, TaskOptions, VolumeBehavior,
+    VolumeIdentifier, Xattrs, directory_entries,
 };
 use crate::session::Session;
 
@@ -32,17 +34,18 @@ pub trait Filesystem {
     /// Get the volume identifier and name.
     async fn get_volume_identifier(&mut self) -> Result<VolumeIdentifier>;
 
-    /// Get properties that instruct FSKit not to call the protocol methods,
-    /// even if the volume conforms to it.
-    async fn get_inhibited_operations(&mut self) -> Result<InhibitedOperations>;
+    /// Get options that tell FSKit to declare behaviors and selectively inhibit
+    /// operation protocols.
+    async fn get_volume_behavior(&mut self) -> Result<VolumeBehavior>;
 
-    /// Properties implemented by volumes that support providing the values of system limits or options.
+    /// Get properties implemented by volumes that support providing the values of
+    /// system limits or options.
     async fn get_path_conf_operations(&mut self) -> Result<PathConfOperations>;
 
-    /// A property that provides the supported capabilities of the volume.
-    async fn get_volume_capabilities(&mut self) -> Result<VolumeCapabilities>;
+    /// Get properties that provide the supported capabilities of the volume.
+    async fn get_volume_capabilities(&mut self) -> Result<SupportedCapabilities>;
 
-    /// A property that provides up-to-date statistics of the volume.
+    /// Get properties that provide up-to-date statistics of the volume.
     async fn get_volume_statistics(&mut self) -> Result<StatFsResult>;
 
     /// Mounts this volume, using the specified options.
@@ -91,6 +94,14 @@ pub trait Filesystem {
         contents: Vec<u8>,
     ) -> Result<Item>;
 
+    /// Creates a new hard link.
+    async fn create_link(
+        &mut self,
+        item_id: u64,
+        name: &OsStr,
+        directory_id: u64,
+    ) -> Result<Vec<u8>>;
+
     /// Removes an existing item from a given directory.
     async fn remove_item(&mut self, item_id: u64, name: &OsStr, directory_id: u64) -> Result<()>;
 
@@ -118,6 +129,10 @@ pub trait Filesystem {
 
     /// Tears down a previously initialized volume instance.
     async fn deactivate(&mut self) -> Result<()>;
+
+    /// Returns an array that specifies the extended attribute names the given
+    /// item supports.
+    async fn get_supported_xattr_names(&mut self, item_id: u64) -> Result<Xattrs>;
 
     /// Gets the specified extended attribute of the given item.
     async fn get_xattr(&mut self, name: &OsStr, item_id: u64) -> Result<Vec<u8>>;
@@ -158,8 +173,12 @@ pub trait Filesystem {
         item_id: u64,
         offset: i64,
         length: i64,
-        flags: Vec<PreallocateFlags>,
+        flags: Vec<PreallocateFlag>,
     ) -> Result<i64>;
+
+    /// Notifies the file system that the kernel is no longer making immediate use of
+    /// the given item.
+    async fn deactivate_item(&mut self, item_id: u64) -> Result<()>;
 }
 
 #[derive(thiserror::Error, Debug)]

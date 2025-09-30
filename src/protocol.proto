@@ -666,8 +666,12 @@ message DeactivateItem {
   uint64 item_id = 1;
 }
 
+// Request envelope for communication over the local socket.
 message Request {
+  // Correlation identifier used to match responses to requests.
   uint64 id = 1;
+
+  // The concrete operation this request carries.
   oneof content {
     // Configurations
     GetResourceIdentifier get_resource_identifier = 2;
@@ -1270,8 +1274,12 @@ message Xattrs {
 // Successful result.
 message Success {}
 
+// Response envelope for communication.
 message Response {
+  // Correlates this response with the original request.
   uint64 request_id = 1;
+
+  // The concrete result payload for the handled request.
   oneof content {
     ResourceIdentifier resource_identifier = 2;
     VolumeIdentifier volume_identifier = 3;
