@@ -192,7 +192,7 @@ pub enum Error {
 /// # Parameters
 /// * `socket_port` — TCP port for the local IPC endpoint. Default: `35367`.
 /// * `fs_type` — File system type selector. On macOS FSKit this must equal `FSFileSystemType`
-///   in the appex Info.plist Default: `bridgefs`.
+///   in the appex Info.plist. Default: `bridgefs`.
 /// * `mount_point` — Existing (usually empty) directory to mount onto. Use `/Volumes/<Name>`
 ///   (may require `sudo`) or a user-owned path. Default: `/tmp/bridgefs-mount-point`.
 /// * `force` — If `true`, preflight **unmounts** anything already mounted at `mount_point`
@@ -229,8 +229,7 @@ impl Default for MountOptions {
 /// A `Session` handle; while it’s alive the mount remains active. Dropping it unmounts.
 ///
 /// # macOS (FSKit) notes
-/// * The extension must be **enabled** in System Settings (File System Extensions)
-///   or via the in-app Extension Browser.
+/// * The extension must be **enabled** in System Settings (File System Extensions).
 /// * FSKit mounts use `noowners`; you can store/report uid/gid in metadata,
 ///   but host POSIX enforcement still be disabled.
 pub async fn mount<FS>(fs: FS, opts: MountOptions) -> session::Result<Session>

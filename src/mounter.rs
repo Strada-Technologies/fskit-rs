@@ -15,14 +15,14 @@ pub(super) struct Mounter {
 
 impl Mounter {
     pub(super) fn mount(opts: MountOptions) -> Result<Self> {
-        // Force unmount a file system
-        if opts.force {
-            let _ = unmount(&opts.mount_point);
-        }
-
         // Check if the mount point exists
         if !opts.mount_point.exists() {
             return Err(Error::MountPointMissing);
+        }
+
+        // Force unmount a file system
+        if opts.force {
+            let _ = unmount(&opts.mount_point);
         }
 
         // Create a blank disk image
