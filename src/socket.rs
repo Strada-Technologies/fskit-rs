@@ -8,9 +8,9 @@ use tokio::select;
 use tokio::sync::mpsc::{Receiver, Sender};
 use tokio::sync::{broadcast, mpsc};
 
+use crate::Filesystem;
 use crate::handler::Handler;
 use crate::pb::{Request, Response};
-use crate::{Filesystem, MountOptions};
 
 pub type Result<T> = std::result::Result<T, Error>;
 
@@ -20,7 +20,7 @@ pub(super) struct Socket {
 }
 
 impl Socket {
-    pub(super) async fn start<FS>(handler: Handler<FS>, opts: MountOptions) -> Result<Self>
+    pub(super) async fn start<FS>(handler: Handler<FS>, server_port: u16) -> Result<Self>
     where
         FS: Filesystem + Send + Sync + Clone + 'static,
     {
@@ -28,7 +28,10 @@ impl Socket {
         let (stop_tx, stop_rx) = mpsc::channel::<()>(1);
 
         tokio::spawn(async move {
-            if spawn_loop(&start_tx, stop_rx, handler, opts).await.is_err() {
+            if spawn_loop(&start_tx, stop_rx, handler, server_port)
+                .await
+                .is_err()
+            {
                 let _ = start_tx.send(false).await;
             }
         });
@@ -49,12 +52,12 @@ async fn spawn_loop<FS>(
     start_tx: &Sender<bool>,
     mut stop_rx: Receiver<()>,
     handler: Handler<FS>,
-    opts: MountOptions,
+    server_port: u16,
 ) -> Result<()>
 where
     FS: Filesystem + Send + Sync + Clone + 'static,
 {
-    let addr = format!("{}:{}", Ipv4Addr::LOCALHOST, opts.socket_port);
+    let addr = format!("{}:{}", Ipv4Addr::LOCALHOST, server_port);
 
     let listener = TcpListener::bind(&addr).await?;
     println!("Listening on {addr}");

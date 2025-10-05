@@ -190,17 +190,15 @@ pub enum Error {
 /// Configuration for mounting the file system and connecting between `FSKitExt` and `fskit-rs`.
 ///
 /// # Parameters
-/// * `socket_port` — TCP port for the local IPC endpoint. Default: `35367`.
-/// * `fs_type` — File system type selector. On macOS FSKit this must equal `FSFileSystemType`
-///   in the appex Info.plist. Default: `bridgefs`.
+/// * `fskit_id` — Bundle identifier of the FSKit extension used for registration
+///   and election. Default: `com.example.FSKitBridge.FSKitExt`.
 /// * `mount_point` — Existing (usually empty) directory to mount onto. Use `/Volumes/<Name>`
 ///   (may require `sudo`) or a user-owned path. Default: `/tmp/bridgefs-mount-point`.
 /// * `force` — If `true`, preflight **unmounts** anything already mounted at `mount_point`
 ///   before mounting. Default: `true`.
 #[derive(Debug, Clone)]
 pub struct MountOptions {
-    pub socket_port: u16,
-    pub fs_type: String,
+    pub fskit_id: String,
     pub mount_point: PathBuf,
     pub force: bool,
 }
@@ -208,8 +206,7 @@ pub struct MountOptions {
 impl Default for MountOptions {
     fn default() -> Self {
         Self {
-            socket_port: 35367,
-            fs_type: "bridgefs".to_string(),
+            fskit_id: "com.example.FSKitBridge.FSKitExt".to_string(),
             mount_point: PathBuf::from("/tmp/bridgefs-mount-point"),
             force: true,
         }

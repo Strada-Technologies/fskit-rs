@@ -1,5 +1,5 @@
 use std::fs::File;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use std::thread;
 use std::time::{Duration, Instant};
@@ -14,7 +14,7 @@ pub(super) struct Mounter {
 }
 
 impl Mounter {
-    pub(super) fn mount(opts: MountOptions) -> Result<Self> {
+    pub(super) fn mount(opts: MountOptions, fs_type: &str) -> Result<Self> {
         // Check if the mount point exists
         if !opts.mount_point.exists() {
             return Err(Error::MountPointMissing);
@@ -26,10 +26,9 @@ impl Mounter {
         }
 
         // Create a blank disk image
-        let dmg_path = format!("/tmp/fskit-{}", opts.fs_type);
-        let image = Path::new(&dmg_path);
+        let image = PathBuf::from(format!("/tmp/fskit-{fs_type}"));
         if !image.exists() {
-            File::create(image)?;
+            File::create(&image)?;
         }
 
         // Attach the raw image as a virtual disk
@@ -43,12 +42,7 @@ impl Mounter {
         let device = std::str::from_utf8(&output.stdout).unwrap().trim();
 
         // Mount a file system
-        let args = format!(
-            "-F -t {} {} {}",
-            opts.fs_type,
-            device,
-            path!(opts.mount_point)
-        );
+        let args = format!("-F -t {} {} {}", fs_type, device, path!(opts.mount_point));
         let mut process = Command::new("mount")
             .args(args.split_whitespace())
             .stderr(Stdio::piped())
@@ -85,9 +79,10 @@ impl Mounter {
         }
 
         println!(
-            "File system mounted - type: {}, mount point: {} ({device})",
-            opts.fs_type,
-            path!(opts.mount_point)
+            "File system mounted - type: {}, mount point: {} ({})",
+            fs_type,
+            path!(opts.mount_point),
+            device
         );
 
         Ok(Self {
