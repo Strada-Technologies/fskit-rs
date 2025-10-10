@@ -16,14 +16,6 @@ impl Info {
         Ok(Self { root })
     }
 
-    pub(super) fn bundle_id(&self) -> Result<String> {
-        self.root
-            .get("CFBundleIdentifier")
-            .and_then(Value::as_string)
-            .map(|s| s.to_string())
-            .ok_or(Error::Invalid)
-    }
-
     pub(super) fn server_port(&self) -> Result<u16> {
         self.root
             .get("Configuration")

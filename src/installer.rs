@@ -2,23 +2,15 @@ use std::fs;
 use std::path::Path;
 use std::process::Command;
 
-use crate::info;
-use crate::info::Info;
-
 pub(super) type Result<T> = std::result::Result<T, Error>;
 
 pub(super) fn run(path: &Path, force: bool) -> Result<()> {
-    let apps = Path::new("/Applications");
-    let app = apps.join(path.file_name().unwrap());
-    let appex = app.join("Contents/Extensions/FSKitExt.appex");
-
     if !path.exists() {
         return Err(Error::AppNotFound);
     }
 
-    if !appex.exists() {
-        return Err(Error::ExtensionNotFound);
-    }
+    let apps = Path::new("/Applications");
+    let app = apps.join(path.file_name().unwrap());
 
     // 1. rm -rf /Applications/<app>
     if app.exists() {
@@ -40,12 +32,8 @@ pub(super) fn run(path: &Path, force: bool) -> Result<()> {
         &["-dr", "com.apple.quarantine", app.to_str().unwrap()],
     )?;
 
-    // 4. pluginkit -a /Applications/<app>/Contents/Extensions/FSKitExt.appex
-    run_cmd("pluginkit", &["-a", appex.to_str().unwrap()])?;
-
-    // 5. pluginkit -e use -i <fskit_id>
-    let info = Info::new(&appex)?;
-    run_cmd("pluginkit", &["-e", "use", "-i", &info.bundle_id()?])?;
+    // 4. open -a /Applications/<app> --args -s
+    run_cmd("open", &["-a", app.to_str().unwrap(), "--args", "-s"])?;
 
     Ok(())
 }
@@ -63,12 +51,6 @@ pub enum Error {
     #[error("host application not found")]
     AppNotFound,
 
-    #[error("file system extension not found")]
-    ExtensionNotFound,
-
     #[error("host application is already installed")]
     AppInstalled,
-
-    #[error(transparent)]
-    Info(#[from] info::Error),
 }

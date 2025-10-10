@@ -241,19 +241,17 @@ where
 /// Installs the FSKit host application into `/Applications` and registers its extension.
 ///
 /// # Behavior
+/// - If `force` is `true`, removes any existing app from `/Applications`.
 /// - Copies the app bundle from `path` to `/Applications`.
-/// - Removes the quarantine attribute to allow extension discovery.
-/// - Registers and elects the embedded FSKit extension via `pluginkit`.
-/// - If `force` is `false` and the destination already exists, returns an error.
-/// - If `force` is `true`, removes the existing app before reinstalling.
+/// - Removes the quarantine attribute from the installed app.
+/// - Launches the installed host app once to trigger extension discovery and registration.
 ///
 /// # Commands
 /// ```text
 /// rm -rf /Applications/<app>
 /// cp -r <path_to_app> /Applications
 /// xattr -dr com.apple.quarantine /Applications/<app>
-/// pluginkit -a /Applications/<app>/Contents/Extensions/FSKitExt.appex
-/// pluginkit -e use -i <fskit_id>
+/// open -a /Applications/<app> --args -s
 /// ```
 pub fn install<P: AsRef<Path>>(path: P, force: bool) -> installer::Result<()> {
     installer::run(path.as_ref(), force)
