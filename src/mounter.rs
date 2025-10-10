@@ -32,19 +32,20 @@ impl Mounter {
         }
 
         // Attach the raw image as a virtual disk
-        let args = format!(
-            "attach -imagekey diskimage-class=CRawDiskImage -nomount {}",
-            path!(image)
-        );
-        let output = Command::new("hdiutil")
-            .args(args.split_whitespace())
-            .output()?;
+        let args = [
+            "attach",
+            "-imagekey",
+            "diskimage-class=CRawDiskImage",
+            "-nomount",
+            path!(image),
+        ];
+        let output = Command::new("hdiutil").args(args).output()?;
         let device = std::str::from_utf8(&output.stdout).unwrap().trim();
 
         // Mount a file system
-        let args = format!("-F -t {} {} {}", fs_type, device, path!(opts.mount_point));
+        let args = ["-F", "-t", fs_type, device, path!(opts.mount_point)];
         let mut process = Command::new("mount")
-            .args(args.split_whitespace())
+            .args(args)
             .stderr(Stdio::piped())
             .spawn()?;
         let start = Instant::now();

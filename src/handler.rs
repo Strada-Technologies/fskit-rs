@@ -223,7 +223,13 @@ where
             },
             request::Content::OpenItem(msg) => match self
                 .filesystem
-                .open_item(msg.item_id, to_open_modes(msg.modes))
+                .open_item(
+                    msg.item_id,
+                    msg.modes
+                        .iter()
+                        .filter_map(|&raw| OpenMode::try_from(raw).ok())
+                        .collect(),
+                )
                 .await
             {
                 Ok(_) => response::Content::Success(Success {}),
@@ -231,7 +237,13 @@ where
             },
             request::Content::CloseItem(msg) => match self
                 .filesystem
-                .close_item(msg.item_id, to_open_modes(msg.modes))
+                .close_item(
+                    msg.item_id,
+                    msg.modes
+                        .iter()
+                        .filter_map(|&raw| OpenMode::try_from(raw).ok())
+                        .collect(),
+                )
                 .await
             {
                 Ok(_) => response::Content::Success(Success {}),
@@ -297,11 +309,4 @@ where
             }
         })
     }
-}
-
-fn to_open_modes(modes: Vec<i32>) -> Vec<OpenMode> {
-    modes
-        .iter()
-        .map(|&v| OpenMode::try_from(v).unwrap_or_default())
-        .collect()
 }
