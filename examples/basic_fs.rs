@@ -2,6 +2,7 @@ use std::ffi::OsStr;
 use std::fs;
 
 use async_trait::async_trait;
+use log::error;
 use tokio::signal;
 
 use fskit_rs::{
@@ -217,7 +218,7 @@ async fn main() -> session::Result<()> {
     let session = match fskit_rs::mount(handler, opts).await {
         Ok(session) => session,
         Err(err) => {
-            eprintln!("{err}");
+            error!("{err}");
             return Err(err);
         }
     };

@@ -1,6 +1,7 @@
 use std::path::Path;
 use std::process::Command;
 
+use log::error;
 use regex::Regex;
 
 use crate::handler::Handler;
@@ -42,7 +43,7 @@ impl Session {
 
 impl Drop for Session {
     fn drop(&mut self) {
-        let _ = self.mounter.unmount().inspect_err(|err| eprintln!("{err}"));
+        let _ = self.mounter.unmount().inspect_err(|err| error!("{err}"));
 
         futures::executor::block_on(async {
             self.socket.stop().await;

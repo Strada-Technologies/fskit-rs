@@ -4,6 +4,8 @@ use std::process::{Command, Stdio};
 use std::thread;
 use std::time::{Duration, Instant};
 
+use log::{error, info};
+
 use crate::{MountOptions, path};
 
 pub type Result<T> = std::result::Result<T, Error>;
@@ -57,7 +59,7 @@ impl Mounter {
                     }
                     let stderr = process.wait_with_output()?.stderr;
                     let out = std::str::from_utf8(&stderr).unwrap();
-                    eprintln!("{out}");
+                    error!("{out}");
                     return if out.contains("is disabled") {
                         Err(Error::ExtensionDisabled)
                     } else if out.contains("Resource busy") {
@@ -70,7 +72,7 @@ impl Mounter {
                 }
                 None => {
                     if start.elapsed() >= Duration::from_secs(3) {
-                        eprintln!("mount command hung, killing process");
+                        error!("mount command hung, killing process");
                         let _ = process.kill();
                         return Err(Error::NeedReboot);
                     }
@@ -79,8 +81,8 @@ impl Mounter {
             }
         }
 
-        println!(
-            "File system mounted - type: {}, mount point: {} ({})",
+        info!(
+            "file system mounted - type: {}, mount point: {} ({})",
             fs_type,
             path!(opts.mount_point),
             device
@@ -93,7 +95,7 @@ impl Mounter {
 
     pub(super) fn unmount(&self) -> Result<()> {
         unmount(&self.path)?;
-        println!("File system unmounted - mount point: {}", path!(self.path));
+        info!("file system unmounted - mount point: {}", path!(self.path));
         Ok(())
     }
 }

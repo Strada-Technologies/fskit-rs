@@ -1,6 +1,7 @@
 use std::net::Ipv4Addr;
 
 use bytes::{Buf, BytesMut};
+use log::{debug, error, info};
 use prost::Message;
 use tokio::io::{AsyncWriteExt, Interest};
 use tokio::net::{TcpListener, TcpStream};
@@ -60,7 +61,7 @@ where
     let addr = format!("{}:{}", Ipv4Addr::LOCALHOST, server_port);
 
     let listener = TcpListener::bind(&addr).await?;
-    println!("Listening on {addr}");
+    info!("listening on {addr}");
 
     let _ = start_tx.send(true).await;
 
@@ -68,20 +69,21 @@ where
 
     loop {
         select! {
+            _ = stop_rx.recv() => {
+                info!("stop listening");
+                let _ = shutdown_tx.send(());
+                break;
+            }
+
             Ok((stream, peer)) = listener.accept() => {
-                println!("Accepted connection from {peer}");
+                info!("accepted connection from {peer}");
                 let handler = handler.clone();
                 let shutdown_rx = shutdown_tx.subscribe();
                 tokio::spawn(async move {
                     if let Err(err) = handle_stream(stream, handler, shutdown_rx).await {
-                        eprintln!("connection task error: {err}");
+                        error!("{err}");
                     }
                 });
-            }
-            _ = stop_rx.recv() => {
-                println!("Stop listening");
-                let _ = shutdown_tx.send(());
-                break;
             }
         }
     }
@@ -102,7 +104,7 @@ where
         select! {
             _ = shutdown_rx.recv() => {
                 let _ = stream.shutdown().await;
-                println!("Connection closed by shutdown: {stream:?}");
+                info!("connection closed by shutdown: {stream:?}");
                 return Ok(());
             }
 
@@ -110,7 +112,7 @@ where
                 r?;
                 match stream.try_read_buf(&mut buf) {
                     Ok(0) => {
-                        println!("Connection closed by peer: {stream:?}");
+                        info!("connection closed by peer: {stream:?}");
                         return Ok(());
                     }
                     Ok(_) => {
@@ -118,7 +120,7 @@ where
                             let mut frozen = buf.clone().freeze();
                             match Request::decode_length_delimited(&mut frozen) {
                                 Ok(request) => {
-                                    println!("Received message: {request:?}");
+                                    debug!("received message: {request:?}");
                                     buf.advance(buf.len() - frozen.remaining());
 
                                     let content = handler.handle(request.content.unwrap()).await.ok();
@@ -133,7 +135,7 @@ where
 
                                     stream.ready(Interest::WRITABLE).await?;
                                     if let Err(err) = stream.write_all(&out).await {
-                                        eprintln!("Write error: {err}");
+                                        error!("write error: {err}");
                                         return Err(err.into());
                                     }
                                 }
@@ -142,7 +144,7 @@ where
                                     if !s.contains("failed to decode length prefix")
                                         && !s.contains("buffer underflow")
                                     {
-                                        eprintln!("Decode error: {err}");
+                                        error!("decode error: {err}");
                                         return Err(err.into());
                                     }
                                     break;
@@ -154,7 +156,7 @@ where
                         continue;
                     }
                     Err(err) => {
-                        eprintln!("Read error: {err}");
+                        error!("read error: {err}");
                         return Err(err.into());
                     }
                 }
