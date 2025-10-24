@@ -1,5 +1,5 @@
 use std::path::Path;
-use std::process::Command;
+use std::process::{Command, Output};
 
 use log::error;
 use regex::Regex;
@@ -56,18 +56,35 @@ fn read_config(fskit_id: &str) -> Result<(u16, String)> {
     // pluginkit -m -i <fskit_id> --raw
     let args = ["-m", "-i", fskit_id, "--raw"];
     let output = Command::new("pluginkit").args(args).output()?;
-    let out = std::str::from_utf8(&output.stdout).unwrap_or_default();
+    if !output.status.success() {
+        error!(
+            "failed to query pluginkit for {fskit_id}: {}",
+            describe_failure(&output)
+        );
+        return Err(Error::ExtensionNotRegistered);
+    }
+
+    let out = String::from_utf8_lossy(&output.stdout).into_owned();
 
     // Find the full path to appex
     let reg = Regex::new(r#"(?m)^\s*path = "([^"]+)";"#).unwrap();
-    let line = &reg
-        .captures_iter(out)
-        .last()
-        .ok_or(Error::ExtensionNotRegistered)?;
+    let Some(line) = reg.captures_iter(&out).last() else {
+        error!("pluginkit did not return a registered path for {fskit_id}");
+        return Err(Error::ExtensionNotRegistered);
+    };
 
     // Get configuration
     let info = Info::new(Path::new(&line[1]))?;
     Ok((info.server_port()?, info.fs_type()?))
+}
+
+pub(super) fn describe_failure(output: &Output) -> String {
+    let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+    if stderr.is_empty() {
+        output.status.to_string()
+    } else {
+        stderr
+    }
 }
 
 #[derive(thiserror::Error, Debug)]

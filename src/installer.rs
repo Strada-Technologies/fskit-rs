@@ -38,9 +38,16 @@ pub(super) fn run(path: &Path, force: bool) -> Result<()> {
     Ok(())
 }
 
-fn run_cmd(cmd: &str, args: &[&str]) -> std::io::Result<()> {
-    Command::new(cmd).args(args).status()?;
-    Ok(())
+fn run_cmd(cmd: &'static str, args: &[&str]) -> Result<()> {
+    let status = Command::new(cmd).args(args).status()?;
+    if status.success() {
+        Ok(())
+    } else {
+        Err(Error::CommandFailed {
+            command: format!("{cmd} {}", args.join(" ")),
+            status: status.to_string(),
+        })
+    }
 }
 
 #[derive(thiserror::Error, Debug)]
@@ -53,4 +60,7 @@ pub enum Error {
 
     #[error("host application is already installed")]
     AppInstalled,
+
+    #[error("command `{command}` failed: {status}")]
+    CommandFailed { command: String, status: String },
 }

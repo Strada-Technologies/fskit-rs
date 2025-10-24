@@ -1,11 +1,12 @@
 use std::fs::File;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::thread;
 use std::time::{Duration, Instant};
 
-use log::{error, info};
+use log::{error, info, warn};
 
+use crate::session::describe_failure;
 use crate::{MountOptions, path};
 
 pub type Result<T> = std::result::Result<T, Error>;
@@ -13,39 +14,38 @@ pub type Result<T> = std::result::Result<T, Error>;
 #[derive(Debug)]
 pub(super) struct Mounter {
     path: PathBuf,
+    device: String,
 }
 
 impl Mounter {
     pub(super) fn mount(opts: MountOptions, fs_type: &str) -> Result<Self> {
-        // Check if the mount point exists
         if !opts.mount_point.exists() {
             return Err(Error::MountPointMissing);
         }
 
-        // Force unmount a file system
-        if opts.force {
-            let _ = unmount(&opts.mount_point);
+        if opts.force
+            && let Err(err) = unmount(&opts.mount_point)
+        {
+            warn!(
+                "forced unmount of existing mount at {} failed: {err}",
+                path!(opts.mount_point)
+            );
         }
 
-        // Create a blank disk image
         let image = PathBuf::from(format!("/tmp/fskit-{fs_type}"));
         if !image.exists() {
             File::create(&image)?;
         }
 
-        // Attach the raw image as a virtual disk
-        let args = [
-            "attach",
-            "-imagekey",
-            "diskimage-class=CRawDiskImage",
-            "-nomount",
-            path!(image),
-        ];
-        let output = Command::new("hdiutil").args(args).output()?;
-        let device = std::str::from_utf8(&output.stdout).unwrap().trim();
+        let device = attach_image(&image)?;
 
-        // Mount a file system
-        let args = ["-F", "-t", fs_type, device, path!(opts.mount_point)];
+        let args = [
+            "-F",
+            "-t",
+            fs_type,
+            device.as_str(),
+            path!(opts.mount_point),
+        ];
         let mut process = Command::new("mount")
             .args(args)
             .stderr(Stdio::piped())
@@ -58,7 +58,7 @@ impl Mounter {
                         break;
                     }
                     let stderr = process.wait_with_output()?.stderr;
-                    let out = std::str::from_utf8(&stderr).unwrap();
+                    let out = String::from_utf8_lossy(&stderr);
                     error!("{out}");
                     return if out.contains("is disabled") {
                         Err(Error::ExtensionDisabled)
@@ -90,26 +90,61 @@ impl Mounter {
 
         Ok(Self {
             path: opts.mount_point,
+            device,
         })
     }
 
     pub(super) fn unmount(&self) -> Result<()> {
         unmount(&self.path)?;
-        info!("file system unmounted - mount point: {}", path!(self.path));
+        detach(&self.device)?;
+        info!(
+            "file system unmounted - mount point: {} ({})",
+            path!(self.path),
+            self.device
+        );
         Ok(())
     }
 }
 
+fn attach_image(image: &Path) -> Result<String> {
+    let args = [
+        "attach",
+        "-imagekey",
+        "diskimage-class=CRawDiskImage",
+        "-nomount",
+        path!(image),
+    ];
+    let output = Command::new("hdiutil").args(args).output()?;
+    if output.status.success() {
+        let device = String::from_utf8(output.stdout)
+            .map_err(|_| Error::InvalidDevice)?
+            .trim()
+            .to_string();
+        if device.is_empty() {
+            Err(Error::InvalidDevice)
+        } else {
+            Ok(device)
+        }
+    } else {
+        Err(Error::AttachFailed(describe_failure(&output)))
+    }
+}
+
 fn unmount(path: &PathBuf) -> Result<()> {
-    if Command::new("umount")
-        .arg("-f")
-        .arg(path)
-        .status()?
-        .success()
-    {
+    let output = Command::new("umount").arg("-f").arg(path).output()?;
+    if output.status.success() {
         Ok(())
     } else {
-        Err(Error::UnmountFailed)
+        Err(Error::UnmountFailed(describe_failure(&output)))
+    }
+}
+
+fn detach(device: &str) -> Result<()> {
+    let output = Command::new("hdiutil").args(["detach", device]).output()?;
+    if output.status.success() {
+        Ok(())
+    } else {
+        Err(Error::DetachFailed(describe_failure(&output)))
     }
 }
 
@@ -121,11 +156,17 @@ pub enum Error {
     #[error("mount point does not exist")]
     MountPointMissing,
 
-    #[error("mount point is already in use")]
-    MountPointBusy,
+    #[error("invalid device identifier returned by hdiutil")]
+    InvalidDevice,
+
+    #[error("failed to attach disk image: {0}")]
+    AttachFailed(String),
 
     #[error("file system extension is disabled")]
     ExtensionDisabled,
+
+    #[error("mount point is already in use")]
+    MountPointBusy,
 
     #[error("file system extension was updated; reboot the system and try again")]
     NeedReboot,
@@ -133,6 +174,9 @@ pub enum Error {
     #[error("mount request failed")]
     MountFailed,
 
-    #[error("unmount request failed")]
-    UnmountFailed,
+    #[error("unmount request failed: {0}")]
+    UnmountFailed(String),
+
+    #[error("failed to detach disk image: {0}")]
+    DetachFailed(String),
 }

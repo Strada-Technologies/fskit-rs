@@ -2,7 +2,6 @@ use std::ffi::OsStr;
 use std::fs;
 
 use async_trait::async_trait;
-use log::error;
 use tokio::signal;
 
 use fskit_rs::{
@@ -207,6 +206,8 @@ impl Filesystem for FsHandler {
 
 #[tokio::main]
 async fn main() -> session::Result<()> {
+    let _ = env_logger::try_init();
+
     let handler = FsHandler;
 
     let opts = MountOptions::default();
@@ -215,17 +216,29 @@ async fn main() -> session::Result<()> {
         let _ = fs::create_dir(opts.mount_point.clone());
     }
 
-    let session = match fskit_rs::mount(handler, opts).await {
+    println!(
+        "Mounting example filesystem at {}...",
+        opts.mount_point.display()
+    );
+
+    let session = match fskit_rs::mount(handler, opts.clone()).await {
         Ok(session) => session,
         Err(err) => {
-            error!("{err}");
+            eprintln!("Mount failed. Ensure the FSKit host app is installed and enabled.");
             return Err(err);
         }
     };
 
+    println!(
+        "Mounted. Press Ctrl+C to unmount {}.",
+        opts.mount_point.display()
+    );
+
     signal::ctrl_c().await?;
 
     drop(session);
+
+    println!("Unmounted {}.", opts.mount_point.display());
 
     Ok(())
 }

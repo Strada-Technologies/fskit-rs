@@ -1,7 +1,7 @@
 use std::net::Ipv4Addr;
 
 use bytes::{Buf, BytesMut};
-use log::{debug, error, info};
+use log::{debug, error, info, warn};
 use prost::Message;
 use tokio::io::{AsyncWriteExt, Interest};
 use tokio::net::{TcpListener, TcpStream};
@@ -11,7 +11,7 @@ use tokio::sync::{broadcast, mpsc};
 
 use crate::Filesystem;
 use crate::handler::Handler;
-use crate::pb::{Request, Response};
+use crate::pb::{Request, Response, response};
 
 pub type Result<T> = std::result::Result<T, Error>;
 
@@ -123,12 +123,21 @@ where
                                     debug!("received message: {request:?}");
                                     buf.advance(buf.len() - frozen.remaining());
 
-                                    let content = handler.handle(request.content.unwrap()).await.ok();
-
-                                    let response = Response {
-                                        request_id: request.id,
-                                        content,
+                                    let content = match request.content {
+                                        Some(content) => match handler.handle(content).await {
+                                            Ok(content) => Some(content),
+                                            Err(err) => {
+                                                error!("handler error: {err}");
+                                                None
+                                            }
+                                        },
+                                        None => {
+                                            warn!("received request without content: {}", request.id);
+                                            Some(response::Content::PosixError(libc::EINVAL))
+                                        }
                                     };
+
+                                    let response = Response { request_id: request.id, content };
 
                                     let mut out = Vec::with_capacity(4096);
                                     response.encode_length_delimited(&mut out).unwrap();

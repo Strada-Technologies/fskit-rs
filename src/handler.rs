@@ -1,6 +1,8 @@
 use std::ffi::OsString;
 use std::os::unix::ffi::OsStringExt;
 
+use log::warn;
+
 use crate::pb::check_access::AccessMask;
 use crate::pb::preallocate_space::PreallocateFlag;
 use crate::pb::set_xattr::SetXattrPolicy;
@@ -63,7 +65,11 @@ where
                 }
             }
             request::Content::Mount(msg) => {
-                match self.filesystem.mount(msg.options.unwrap()).await {
+                let Some(options) = msg.options else {
+                    warn!("Mount request missing options");
+                    return Ok(response::Content::PosixError(libc::EINVAL));
+                };
+                match self.filesystem.mount(options).await {
                     Ok(_) => response::Content::Success(Success {}),
                     Err(Error::Posix(code)) => response::Content::PosixError(code),
                 }
@@ -86,14 +92,20 @@ where
                     Err(Error::Posix(code)) => response::Content::PosixError(code),
                 }
             }
-            request::Content::SetAttributes(msg) => match self
-                .filesystem
-                .set_attributes(msg.item_id, msg.attributes.unwrap())
-                .await
-            {
-                Ok(attrs) => response::Content::ItemAttributes(attrs),
-                Err(Error::Posix(code)) => response::Content::PosixError(code),
-            },
+            request::Content::SetAttributes(msg) => {
+                let Some(attributes) = msg.attributes else {
+                    warn!("SetAttributes request missing attributes");
+                    return Ok(response::Content::PosixError(libc::EINVAL));
+                };
+                match self
+                    .filesystem
+                    .set_attributes(msg.item_id, attributes)
+                    .await
+                {
+                    Ok(attrs) => response::Content::ItemAttributes(attrs),
+                    Err(Error::Posix(code)) => response::Content::PosixError(code),
+                }
+            }
             request::Content::LookupItem(msg) => match self
                 .filesystem
                 .lookup_item(&OsString::from_vec(msg.name), msg.directory_id)
@@ -114,32 +126,48 @@ where
                     Err(Error::Posix(code)) => response::Content::PosixError(code),
                 }
             }
-            request::Content::CreateItem(msg) => match self
-                .filesystem
-                .create_item(
-                    &OsString::from_vec(msg.name),
-                    ItemType::try_from(msg.r#type).unwrap(),
-                    msg.directory_id,
-                    msg.attributes.unwrap(),
-                )
-                .await
-            {
-                Ok(item) => response::Content::Item(item),
-                Err(Error::Posix(code)) => response::Content::PosixError(code),
-            },
-            request::Content::CreateSymbolicLink(msg) => match self
-                .filesystem
-                .create_symbolic_link(
-                    &OsString::from_vec(msg.name),
-                    msg.directory_id,
-                    msg.new_attributes.unwrap(),
-                    msg.contents,
-                )
-                .await
-            {
-                Ok(item) => response::Content::Item(item),
-                Err(Error::Posix(code)) => response::Content::PosixError(code),
-            },
+            request::Content::CreateItem(msg) => {
+                let Ok(item_type) = ItemType::try_from(msg.r#type) else {
+                    warn!("CreateItem request contained unknown type: {}", msg.r#type);
+                    return Ok(response::Content::PosixError(libc::EINVAL));
+                };
+                let Some(attributes) = msg.attributes else {
+                    warn!("CreateItem request missing attributes");
+                    return Ok(response::Content::PosixError(libc::EINVAL));
+                };
+                match self
+                    .filesystem
+                    .create_item(
+                        &OsString::from_vec(msg.name),
+                        item_type,
+                        msg.directory_id,
+                        attributes,
+                    )
+                    .await
+                {
+                    Ok(item) => response::Content::Item(item),
+                    Err(Error::Posix(code)) => response::Content::PosixError(code),
+                }
+            }
+            request::Content::CreateSymbolicLink(msg) => {
+                let Some(attributes) = msg.new_attributes else {
+                    warn!("CreateSymbolicLink request missing attributes");
+                    return Ok(response::Content::PosixError(libc::EINVAL));
+                };
+                match self
+                    .filesystem
+                    .create_symbolic_link(
+                        &OsString::from_vec(msg.name),
+                        msg.directory_id,
+                        attributes,
+                        msg.contents,
+                    )
+                    .await
+                {
+                    Ok(item) => response::Content::Item(item),
+                    Err(Error::Posix(code)) => response::Content::PosixError(code),
+                }
+            }
             request::Content::CreateLink(msg) => match self
                 .filesystem
                 .create_link(msg.item_id, &OsString::from_vec(msg.name), msg.directory_id)
@@ -180,7 +208,11 @@ where
                 Err(Error::Posix(code)) => response::Content::PosixError(code),
             },
             request::Content::Activate(msg) => {
-                match self.filesystem.activate(msg.options.unwrap()).await {
+                let Some(options) = msg.options else {
+                    warn!("Activate request missing options");
+                    return Ok(response::Content::PosixError(libc::EINVAL));
+                };
+                match self.filesystem.activate(options).await {
                     Ok(item) => response::Content::Item(item),
                     Err(Error::Posix(code)) => response::Content::PosixError(code),
                 }

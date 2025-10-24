@@ -21,8 +21,7 @@ impl Info {
             .get("Configuration")
             .and_then(Value::as_dictionary)
             .and_then(|d| d.get("serverPort"))
-            .and_then(Value::as_string)
-            .and_then(|s| s.parse::<u16>().ok())
+            .and_then(Self::parse_u16)
             .ok_or(Error::Invalid)
     }
 
@@ -34,6 +33,18 @@ impl Info {
             .and_then(Value::as_string)
             .map(|s| s.to_string())
             .ok_or(Error::Invalid)
+    }
+
+    fn parse_u16(value: &Value) -> Option<u16> {
+        value
+            .as_unsigned_integer()
+            .and_then(|v| u16::try_from(v).ok())
+            .or_else(|| {
+                value
+                    .as_signed_integer()
+                    .and_then(|v| u16::try_from(v).ok())
+            })
+            .or_else(|| value.as_string().and_then(|s| s.parse::<u16>().ok()))
     }
 }
 
