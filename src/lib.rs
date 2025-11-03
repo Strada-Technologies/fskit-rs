@@ -193,7 +193,7 @@ pub enum Error {
 ///
 /// # Parameters
 /// * `fskit_id` — Bundle identifier of the FSKit extension used for registration
-///   and election. Default: `com.example.FSKitBridge.FSKitExt`.
+///   and election. Default: `network.debox.fskitbridge.fskitext`.
 /// * `mount_point` — Existing (usually empty) directory to mount onto. Use `/Volumes/<Name>`
 ///   (may require `sudo`) or a user-owned path. Default: `/tmp/bridgefs-mount-point`.
 /// * `force` — If `true`, preflight **unmounts** anything already mounted at `mount_point`
@@ -208,7 +208,7 @@ pub struct MountOptions {
 impl Default for MountOptions {
     fn default() -> Self {
         Self {
-            fskit_id: "com.example.FSKitBridge.FSKitExt".to_string(),
+            fskit_id: "network.debox.fskitbridge.fskitext".to_string(),
             mount_point: PathBuf::from("/tmp/bridgefs-mount-point"),
             force: true,
         }
@@ -221,16 +221,16 @@ impl Default for MountOptions {
 ///
 /// # Parameters
 /// * `fs` — Your `Filesystem` impl. Must be `Send + Sync + Clone + 'static`.
-///   Prefer keeping heavy state in `Arc<_>`.
+///   Prefer keeping a heavy state in `Arc<_>`.
 /// * `opts` — Combined mount/connection configuration.
 ///
 /// # Returns
-/// A `Session` handle; while it’s alive the mount remains active. Dropping it unmounts.
+/// A `Session` handle; while it’s alive, the mount remains active. Dropping it unmounts.
 ///
 /// # macOS (FSKit) notes
 /// * The extension must be **enabled** in System Settings (File System Extensions).
 /// * FSKit mounts use `noowners`; you can store/report uid/gid in metadata,
-///   but host POSIX enforcement still be disabled.
+///   but host POSIX enforcement will still be disabled.
 pub async fn mount<FS>(fs: FS, opts: MountOptions) -> session::Result<Session>
 where
     FS: Filesystem + Send + Sync + Clone + 'static,
