@@ -32,7 +32,7 @@ impl Mounter {
             );
         }
 
-        let image = PathBuf::from(format!("/tmp/fskit-{fs_type}"));
+        let image = PathBuf::from(format!("/tmp/{fs_type}.dmg"));
         if !image.exists() {
             File::create(&image)?;
         }

@@ -195,7 +195,7 @@ pub enum Error {
 /// * `fskit_id` — Bundle identifier of the FSKit extension used for registration
 ///   and election. Default: `network.debox.fskitbridge.fskitext`.
 /// * `mount_point` — Existing (usually empty) directory to mount onto. Use `/Volumes/<Name>`
-///   (may require `sudo`) or a user-owned path. Default: `/tmp/bridgefs-mount-point`.
+///   (may require `sudo`) or a user-owned path. Default: `/tmp/fskitbridge`.
 /// * `force` — If `true`, preflight **unmounts** anything already mounted at `mount_point`
 ///   before mounting. Default: `true`.
 #[derive(Debug, Clone)]
@@ -209,7 +209,7 @@ impl Default for MountOptions {
     fn default() -> Self {
         Self {
             fskit_id: "network.debox.fskitbridge.fskitext".to_string(),
-            mount_point: PathBuf::from("/tmp/bridgefs-mount-point"),
+            mount_point: PathBuf::from("/tmp/fskitbridge"),
             force: true,
         }
     }
