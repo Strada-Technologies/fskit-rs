@@ -54,8 +54,9 @@ impl Drop for Session {
 fn read_config(fskit_id: &str) -> Result<(u16, String)> {
     // Get the output of the 'pluginkit' command
     // pluginkit -m -i <fskit_id> --raw
-    let args = ["-m", "-i", fskit_id, "--raw"];
-    let output = Command::new("pluginkit").args(args).output()?;
+    let output = Command::new("pluginkit")
+        .args(["-m", "-i", fskit_id, "--raw"])
+        .output()?;
     if !output.status.success() {
         error!(
             "failed to query pluginkit for {fskit_id}: {}",
@@ -64,11 +65,11 @@ fn read_config(fskit_id: &str) -> Result<(u16, String)> {
         return Err(Error::ExtensionNotRegistered);
     }
 
-    let out = String::from_utf8_lossy(&output.stdout).into_owned();
+    let stdout = String::from_utf8_lossy(&output.stdout);
 
     // Find the full path to appex
     let reg = Regex::new(r#"(?m)^\s*path = "([^"]+)";"#).unwrap();
-    let Some(line) = reg.captures_iter(&out).last() else {
+    let Some(line) = reg.captures_iter(&stdout).last() else {
         error!("pluginkit did not return a registered path for {fskit_id}");
         return Err(Error::ExtensionNotRegistered);
     };

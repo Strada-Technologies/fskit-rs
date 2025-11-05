@@ -26,6 +26,9 @@ mod pb {
     include!(concat!(env!("OUT_DIR"), "/pb.rs"));
 }
 
+const FSKIT_ID: &str = "network.debox.fskitbridge.fskitext";
+const DEFAULT_MOUNT_POINT: &str = "/tmp/fskitbridge";
+
 pub type Result<T> = std::result::Result<T, Error>;
 
 #[async_trait]
@@ -208,8 +211,8 @@ pub struct MountOptions {
 impl Default for MountOptions {
     fn default() -> Self {
         Self {
-            fskit_id: "network.debox.fskitbridge.fskitext".to_string(),
-            mount_point: PathBuf::from("/tmp/fskitbridge"),
+            fskit_id: FSKIT_ID.to_string(),
+            mount_point: PathBuf::from(DEFAULT_MOUNT_POINT),
             force: true,
         }
     }
