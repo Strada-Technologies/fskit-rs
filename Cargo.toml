@@ -2,6 +2,13 @@
 name = "fskit-rs"
 version = "0.1.0"
 edition = "2024"
+license = "MIT OR Apache-2.0"
+readme = "README.md"
+description = "Rust crate for FSKitBridge protocol & socket layer (TCP + Protobuf)"
+repository = "https://github.com/debox-network/fskit-rs"
+authors = ["Debox Network <dev@debox.network>"]
+keywords = ["macos", "fskit", "extensionkit", "filesystem"]
+categories = ["filesystem", "network-programming", "os::macos-apis"]
 
 [dependencies]
 async-trait = "0.1"
@@ -21,3 +28,7 @@ prost-build = "0.14"
 
 [dev-dependencies]
 env_logger = "0.11"
+
+[[example]]
+name = "basic_fs"
+path = "examples/basic_fs.rs"
