@@ -1,14 +1,15 @@
 use std::path::Path;
-use std::process::{Command, Output};
 
 use log::error;
-use regex::Regex;
 
-use crate::handler::Handler;
-use crate::info::Info;
-use crate::mounter::Mounter;
-use crate::socket::Socket;
-use crate::{Filesystem, MountOptions, info, mounter, socket};
+use super::handler::Handler;
+use super::info::Info;
+use super::installer;
+use super::mounter::Mounter;
+use super::socket::Socket;
+use super::{Filesystem, MountOptions, mounter, registration, socket};
+
+use self::Error::ExtensionNotRegistered;
 
 pub type Result<T> = std::result::Result<T, Error>;
 
@@ -51,41 +52,24 @@ impl Drop for Session {
     }
 }
 
-fn read_config(fskit_id: &str) -> Result<(u16, String)> {
-    // Get the output of the 'pluginkit' command
-    // pluginkit -m -i <fskit_id> --raw
-    let output = Command::new("pluginkit")
-        .args(["-m", "-i", fskit_id, "--raw"])
-        .output()?;
-    if !output.status.success() {
-        error!(
-            "failed to query pluginkit for {fskit_id}: {}",
-            describe_failure(&output)
-        );
-        return Err(Error::ExtensionNotRegistered);
-    }
+fn read_config(appex_id: &str) -> Result<(u16, String)> {
+    let statuses = registration::registrations(appex_id)?;
 
-    let stdout = String::from_utf8_lossy(&output.stdout);
-
-    // Find the full path to appex
-    let reg = Regex::new(r#"(?m)^\s*path = "([^"]+)";"#).unwrap();
-    let Some(line) = reg.captures_iter(&stdout).last() else {
-        error!("pluginkit did not return a registered path for {fskit_id}");
-        return Err(Error::ExtensionNotRegistered);
+    let Some(status) = statuses
+        .iter()
+        .find(|status| status.elected)
+        .or_else(|| statuses.first())
+    else {
+        return Err(ExtensionNotRegistered);
     };
 
-    // Get configuration
-    let info = Info::new(Path::new(&line[1]))?;
-    Ok((info.server_port()?, info.fs_type()?))
-}
+    let appex_path = installer::appex_path(&status.app_path)?;
+    let info = Info::new(Path::new(&appex_path)).map_err(installer::Error::from)?;
 
-pub(super) fn describe_failure(output: &Output) -> String {
-    let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
-    if stderr.is_empty() {
-        output.status.to_string()
-    } else {
-        stderr
-    }
+    Ok((
+        info.server_port().map_err(installer::Error::from)?,
+        info.fs_type().map_err(installer::Error::from)?,
+    ))
 }
 
 #[derive(thiserror::Error, Debug)]
@@ -93,15 +77,15 @@ pub enum Error {
     #[error(transparent)]
     Io(#[from] std::io::Error),
 
-    #[error("file system extension not registered")]
-    ExtensionNotRegistered,
-
     #[error(transparent)]
-    Info(#[from] info::Error),
+    Installer(#[from] installer::Error),
 
     #[error(transparent)]
     Socket(#[from] socket::Error),
 
     #[error(transparent)]
     Mounter(#[from] mounter::Error),
+
+    #[error("FSKit extension is not registered")]
+    ExtensionNotRegistered,
 }
