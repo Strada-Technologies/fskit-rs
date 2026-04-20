@@ -20,5 +20,5 @@
 - Initial release of **fskit-rs**. See details in the [README](README.md).
 
 [Unreleased]: ../../compare/v0.2.0...HEAD
-[0.2.0]: ../../releases/tag/v0.2.0
-[0.1.0]: ../../releases/tag/v0.1.0
+[v0.2.0]: ../../releases/tag/v0.2.0
+[v0.1.0]: ../../releases/tag/v0.1.0
