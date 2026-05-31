@@ -3,7 +3,7 @@ use std::net::Ipv4Addr;
 use bytes::{Buf, BytesMut};
 use log::{debug, error, info, warn};
 use prost::Message;
-use tokio::io::{AsyncWriteExt, Interest};
+use tokio::io::AsyncWriteExt;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::select;
 use tokio::sync::mpsc::{Receiver, Sender};
@@ -92,27 +92,46 @@ where
 }
 
 async fn handle_stream<FS>(
-    mut stream: TcpStream,
-    mut handler: Handler<FS>,
+    stream: TcpStream,
+    handler: Handler<FS>,
     mut shutdown_rx: broadcast::Receiver<()>,
 ) -> Result<()>
 where
     FS: Filesystem + Send + Sync + Clone + 'static,
 {
+    // Split into independent read and write halves so multiple in-flight
+    // handler tasks can produce responses concurrently, with a single
+    // writer task serializing the bytes onto the wire.
+    let (read_half, mut write_half) = stream.into_split();
+    let (resp_tx, mut resp_rx) = mpsc::unbounded_channel::<Vec<u8>>();
+
+    let writer = tokio::spawn(async move {
+        while let Some(out) = resp_rx.recv().await {
+            if let Err(err) = write_half.write_all(&out).await {
+                error!("write error: {err}");
+                break;
+            }
+        }
+        let _ = write_half.shutdown().await;
+    });
+
     let mut buf = BytesMut::with_capacity(4096);
     loop {
         select! {
             _ = shutdown_rx.recv() => {
-                let _ = stream.shutdown().await;
-                info!("connection closed by shutdown: {stream:?}");
+                info!("connection closed by shutdown");
+                drop(resp_tx);
+                let _ = writer.await;
                 return Ok(());
             }
 
-            r = stream.ready(Interest::READABLE) => {
+            r = read_half.readable() => {
                 r?;
-                match stream.try_read_buf(&mut buf) {
+                match read_half.try_read_buf(&mut buf) {
                     Ok(0) => {
-                        info!("connection closed by peer: {stream:?}");
+                        info!("connection closed by peer");
+                        drop(resp_tx);
+                        let _ = writer.await;
                         return Ok(());
                     }
                     Ok(_) => {
@@ -123,30 +142,36 @@ where
                                     debug!("received message: {request:?}");
                                     buf.advance(buf.len() - frozen.remaining());
 
-                                    let content = match request.content {
-                                        Some(content) => match handler.handle(content).await {
-                                            Ok(content) => Some(content),
-                                            Err(err) => {
-                                                error!("handler error: {err}");
-                                                None
+                                    let request_id = request.id;
+                                    let content_in = request.content;
+                                    let mut handler = handler.clone();
+                                    let resp_tx = resp_tx.clone();
+
+                                    tokio::spawn(async move {
+                                        let content = match content_in {
+                                            Some(content) => match handler.handle(content).await {
+                                                Ok(content) => Some(content),
+                                                Err(err) => {
+                                                    error!("handler error: {err}");
+                                                    None
+                                                }
+                                            },
+                                            None => {
+                                                warn!("received request without content: {request_id}");
+                                                Some(response::Content::PosixError(libc::EINVAL))
                                             }
-                                        },
-                                        None => {
-                                            warn!("received request without content: {}", request.id);
-                                            Some(response::Content::PosixError(libc::EINVAL))
+                                        };
+
+                                        let response = Response { request_id, content };
+
+                                        let mut out = Vec::with_capacity(4096);
+                                        if let Err(err) = response.encode_length_delimited(&mut out) {
+                                            error!("encode error: {err}");
+                                            return;
                                         }
-                                    };
 
-                                    let response = Response { request_id: request.id, content };
-
-                                    let mut out = Vec::with_capacity(4096);
-                                    response.encode_length_delimited(&mut out).unwrap();
-
-                                    stream.ready(Interest::WRITABLE).await?;
-                                    if let Err(err) = stream.write_all(&out).await {
-                                        error!("write error: {err}");
-                                        return Err(err.into());
-                                    }
+                                        let _ = resp_tx.send(out);
+                                    });
                                 }
                                 Err(err) => {
                                     let s = err.to_string();
@@ -154,6 +179,8 @@ where
                                         && !s.contains("buffer underflow")
                                     {
                                         error!("decode error: {err}");
+                                        drop(resp_tx);
+                                        let _ = writer.await;
                                         return Err(err.into());
                                     }
                                     break;
@@ -166,6 +193,8 @@ where
                     }
                     Err(err) => {
                         error!("read error: {err}");
+                        drop(resp_tx);
+                        let _ = writer.await;
                         return Err(err.into());
                     }
                 }
